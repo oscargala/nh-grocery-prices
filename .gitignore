@@ -7,4 +7,5 @@ dist/
 build/
 output/
 data/recon/
+data/cookies/
 .claude/

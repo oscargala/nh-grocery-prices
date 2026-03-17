@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import json
 import logging
@@ -23,6 +24,31 @@ from src.scrapers.flipp import FlippScraper
 logger = logging.getLogger(__name__)
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
+
+
+async def _run_playwright_scrapers(categories) -> list:
+    """Run all enabled Playwright scrapers with a shared browser."""
+    from src.scrapers.playwright import PlaywrightManager, SCRAPERS
+
+    all_products = []
+    try:
+        async with PlaywrightManager() as manager:
+            for scraper_cls in SCRAPERS:
+                scraper = scraper_cls(manager=manager, categories=categories)
+                try:
+                    products = await scraper.collect_all()
+                    all_products.extend(products)
+                    logger.info(
+                        "Playwright %s: %d products",
+                        scraper.store_name,
+                        len(products),
+                    )
+                except Exception:
+                    logger.exception("Playwright scraper failed: %s", scraper.store_name)
+    except Exception:
+        logger.exception("Playwright browser failed to start — skipping headless scrapers")
+
+    return all_products
 
 
 def run_pipeline(postal_code: str = "03301") -> dict:
@@ -54,6 +80,11 @@ def run_pipeline(postal_code: str = "03301") -> dict:
     aldi_products = aldi_collect_all()
     all_products.extend(aldi_products)
     logger.info("Aldi catalog: %d products, total: %d", len(aldi_products), len(all_products))
+
+    # Playwright scrapers (everyday prices from stores behind anti-bot protection)
+    playwright_products = asyncio.run(_run_playwright_scrapers(categories))
+    all_products.extend(playwright_products)
+    logger.info("Playwright: %d products, total: %d", len(playwright_products), len(all_products))
 
     categorized = [p for p in all_products if p.category]
 
