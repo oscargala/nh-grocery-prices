@@ -8,4 +8,5 @@ build/
 output/
 data/recon/
 data/cookies/
+data/cache/
 .claude/

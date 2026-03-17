@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import random
 import re
 from abc import ABC, abstractmethod
+from dataclasses import asdict
+from pathlib import Path
 
 from playwright.async_api import BrowserContext, Page, Response
 
 from ...models import CategoryDef, FlyerProduct
 from .browser import PlaywrightManager
+
+CACHE_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data" / "cache"
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +59,8 @@ class PlaywrightStoreScraper(ABC):
     async def collect_all(self) -> list[FlyerProduct]:
         """Main entry point. Sets up context, scrapes, tears down.
 
-        Returns [] on failure instead of crashing the pipeline.
+        On success, caches products to disk. On failure, falls back to
+        the last successful cache so the dashboard still shows data.
         """
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -70,7 +76,14 @@ class PlaywrightStoreScraper(ABC):
                     len(categorized),
                     attempt,
                 )
-                return products
+
+                if products:
+                    self._save_cache(products)
+                    return products
+
+                # Scrape succeeded but returned empty — likely bot-blocked
+                logger.warning("%s: scrape returned 0 products, loading cache", self.store_name)
+                return self._load_cache()
 
             except Exception:
                 logger.exception(
@@ -89,8 +102,43 @@ class PlaywrightStoreScraper(ABC):
                         logger.info("%s: cleared stale cookies for retry", self.store_name)
                     await asyncio.sleep(2)
 
-        logger.error("%s: all %d attempts failed", self.store_name, self.max_retries)
-        return []
+        logger.error("%s: all %d attempts failed, loading cache", self.store_name, self.max_retries)
+        return self._load_cache()
+
+    def _cache_path(self) -> Path:
+        return CACHE_DIR / f"{self.store_id}.json"
+
+    def _save_cache(self, products: list[FlyerProduct]) -> None:
+        """Save products to disk cache."""
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        data = {
+            "store_id": self.store_id,
+            "timestamp": __import__("datetime").datetime.now().isoformat(),
+            "products": [asdict(p) for p in products],
+        }
+        self._cache_path().write_text(json.dumps(data, indent=2))
+        logger.info("%s: cached %d products to disk", self.store_name, len(products))
+
+    def _load_cache(self) -> list[FlyerProduct]:
+        """Load products from disk cache if available."""
+        path = self._cache_path()
+        if not path.exists():
+            logger.info("%s: no cache file found", self.store_name)
+            return []
+        try:
+            data = json.loads(path.read_text())
+            products = [FlyerProduct(**p) for p in data["products"]]
+            timestamp = data.get("timestamp", "unknown")
+            logger.info(
+                "%s: loaded %d cached products (from %s)",
+                self.store_name,
+                len(products),
+                timestamp,
+            )
+            return products
+        except Exception:
+            logger.exception("%s: failed to load cache", self.store_name)
+            return []
 
     @abstractmethod
     async def _scrape(self) -> list[FlyerProduct]:
