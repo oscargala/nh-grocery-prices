@@ -1,0 +1,251 @@
+{
+  "categories": [
+    {
+      "id": "canned_vegetables",
+      "name": "Canned Vegetables",
+      "keywords": [
+        "\\bcanned\\b.*\\b(vegetables?|veggies)\\b",
+        "\\b(green beans?|corn|peas|carrots?|tomato(es)?|beets?)\\b.*\\bcanned\\b",
+        "\\bcanned\\b.*\\b(green beans?|corn|peas|carrots?|tomato(es)?|beets?)\\b",
+        "\\b(green beans?|sweet corn|sweet peas|mixed vegetables?)\\b",
+        "\\bdiced tomato(es)?\\b",
+        "\\bcrushed tomato(es)?\\b",
+        "\\btomato (paste|sauce)\\b",
+        "\\bcanned (beans?|chickpeas?|lentils?)\\b",
+        "\\b(kidney|black|pinto|navy|great northern) beans?\\b",
+        "\\b(whole|cut|french style) (green )?beans?\\b"
+      ],
+      "exclude": [
+        "\\bcorn dog\\b",
+        "\\bcorn chips?\\b",
+        "\\bcorned beef\\b",
+        "\\bcandy corn\\b",
+        "\\bbean (bag|coffee)\\b",
+        "\\bjelly bean\\b"
+      ]
+    },
+    {
+      "id": "canned_soups",
+      "name": "Canned Soups",
+      "keywords": [
+        "\\bsoup\\b",
+        "\\bbroth\\b",
+        "\\bchowder\\b",
+        "\\bstew\\b",
+        "\\bbisque\\b",
+        "\\bchili\\b",
+        "\\bcampbell'?s\\b"
+      ],
+      "exclude": [
+        "\\bsoup (bowl|spoon|ladle|pot|maker)\\b",
+        "\\bsoup mix\\b.*\\bdry\\b",
+        "\\bstew meat\\b",
+        "\\boysters?\\b",
+        "\\bsardines?\\b",
+        "\\btuna\\b",
+        "\\bclams?\\b"
+      ]
+    },
+    {
+      "id": "pasta",
+      "name": "Pasta",
+      "keywords": [
+        "\\bpasta\\b",
+        "\\bspaghetti\\b",
+        "\\bpenne\\b",
+        "\\brigatoni\\b",
+        "\\brotini\\b",
+        "\\bfettuccin[ei]\\b",
+        "\\blinguine\\b",
+        "\\bmacaroni\\b",
+        "\\b(elbow|bow tie|angel hair)\\b",
+        "\\bfarfalle\\b",
+        "\\bziti\\b",
+        "\\blasagna\\b",
+        "\\bnoodles?\\b",
+        "\\bbarilla\\b",
+        "\\bmueller'?s\\b"
+      ],
+      "exclude": [
+        "\\bpasta sauce\\b",
+        "\\bpasta salad\\b.*\\bkit\\b",
+        "\\bramen\\b",
+        "\\bpool noodle\\b"
+      ]
+    },
+    {
+      "id": "rice",
+      "name": "Rice",
+      "keywords": [
+        "\\brice\\b",
+        "\\brice-?a-?roni\\b",
+        "\\buncle ben'?s\\b",
+        "\\bminute rice\\b",
+        "\\bjasmine\\b.*\\bgrain\\b",
+        "\\bbasmati\\b"
+      ],
+      "exclude": [
+        "\\brice (cake|crisp|krispie|pudding|vinegar|wine|paper|milk)\\b",
+        "\\brice cereal\\b",
+        "\\bcauliflower rice\\b",
+        "\\bfried rice\\b.*\\bfrozen\\b"
+      ]
+    },
+    {
+      "id": "oats",
+      "name": "Oats & Oatmeal",
+      "keywords": [
+        "\\boats\\b",
+        "\\boatmeal\\b",
+        "\\bquaker\\b.*\\boats\\b",
+        "\\binstant oatmeal\\b",
+        "\\brolled oats\\b",
+        "\\bsteel[- ]?cut oats\\b",
+        "\\bovernight oats\\b"
+      ],
+      "exclude": [
+        "\\boat (milk|bar)\\b",
+        "\\bgranola\\b"
+      ]
+    },
+    {
+      "id": "cereal",
+      "name": "Cereal",
+      "keywords": [
+        "\\bcereal\\b",
+        "\\bcheerios\\b",
+        "\\bchex\\b",
+        "\\bfrosted flakes\\b",
+        "\\bcorn flakes\\b",
+        "\\braisin bran\\b",
+        "\\brice krispies\\b",
+        "\\bfruit loops\\b",
+        "\\bfroot loops\\b",
+        "\\blife cereal\\b",
+        "\\bspecial k\\b",
+        "\\bhoney nut\\b",
+        "\\bcinnamon toast\\b",
+        "\\bcocoa puffs\\b",
+        "\\blucky charms\\b",
+        "\\bcap'?n crunch\\b"
+      ],
+      "exclude": [
+        "\\bcereal bar\\b",
+        "\\bcereal bowl\\b"
+      ]
+    },
+    {
+      "id": "spices",
+      "name": "Spices & Seasoning",
+      "keywords": [
+        "\\bspice[sd]?\\b",
+        "\\bseasoning\\b",
+        "\\b(garlic|onion|chili) powder\\b",
+        "\\bpaprika\\b",
+        "\\bcumin\\b",
+        "\\bturmeric\\b",
+        "\\boregano\\b",
+        "\\bbasil\\b",
+        "\\bthyme\\b",
+        "\\bcinnamon\\b(?!.*\\b(applesauce|roll|bread|toast|crunch|bun|waffle|pancake|cereal)\\b)",
+        "\\bpepper(corn)?s?\\b.*\\bground\\b",
+        "\\bground\\b.*\\bpepper(corn)?s?\\b",
+        "\\bblack pepper\\b",
+        "\\bcayenne\\b",
+        "\\bitalian seasoning\\b",
+        "\\bmccormick\\b",
+        "\\btaco seasoning\\b",
+        "\\bsalt\\b.*\\bseasoned\\b",
+        "\\bseasoned salt\\b"
+      ],
+      "exclude": [
+        "\\bold spice\\b",
+        "\\bpumpkin spice\\b.*\\b(latte|coffee|creamer)\\b",
+        "\\bspice rack\\b",
+        "\\bspice grinder\\b"
+      ]
+    },
+    {
+      "id": "frozen_vegetables",
+      "name": "Frozen Vegetables",
+      "keywords": [
+        "\\bfrozen\\b.*\\b(vegetables?|veggies|broccoli|corn|peas|carrots?|green beans?|spinach|mixed veg)\\b",
+        "\\b(vegetables?|broccoli|corn|peas|carrots?|green beans?|spinach)\\b.*\\bfrozen\\b",
+        "\\bsteamable\\b.*\\b(vegetables?|veggies|broccoli|corn|peas)\\b",
+        "\\bbirds? eye\\b.*\\b(vegetables?|veggies)\\b",
+        "\\bgreen giant\\b.*\\b(vegetables?|veggies)\\b"
+      ],
+      "exclude": [
+        "\\bfrozen (fruit|pizza|dinner|entree|meal|breakfast)\\b"
+      ]
+    },
+    {
+      "id": "frozen_meals",
+      "name": "Frozen Meals",
+      "keywords": [
+        "\\bpot pie\\b",
+        "\\bfrozen (dinner|meal|entree|lunch)\\b",
+        "\\b(dinner|meal|entree)s?\\b.*\\bfrozen\\b",
+        "\\bhungry[- ]?man\\b",
+        "\\bbanquet\\b",
+        "\\bmarie callender'?s\\b",
+        "\\bstouffer'?s\\b",
+        "\\blean cuisine\\b",
+        "\\bhealthy choice\\b",
+        "\\bsmart ones\\b",
+        "\\bhot pocket\\b",
+        "\\btv dinner\\b",
+        "\\bmicrowav(e|able) (meal|dinner|entree)\\b"
+      ],
+      "exclude": [
+        "\\bpet food\\b",
+        "\\bdog food\\b"
+      ]
+    },
+    {
+      "id": "toilet_paper",
+      "name": "Toilet Paper",
+      "keywords": [
+        "\\btoilet paper\\b",
+        "\\bbath tissue\\b",
+        "\\bbathroom tissue\\b",
+        "\\bcharmin\\b",
+        "\\bscott\\b.*\\b(tissue|1000)\\b",
+        "\\bangel soft\\b",
+        "\\bcottonelle\\b"
+      ],
+      "exclude": []
+    },
+    {
+      "id": "paper_towels",
+      "name": "Paper Towels",
+      "keywords": [
+        "\\bpaper towel\\b",
+        "\\bbounty\\b",
+        "\\bviva\\b.*\\btowel\\b",
+        "\\bselect-?a-?size\\b.*\\btowel\\b",
+        "\\bbrawny\\b"
+      ],
+      "exclude": [
+        "\\bhand towel\\b",
+        "\\bbath towel\\b"
+      ]
+    },
+    {
+      "id": "diapers",
+      "name": "Diapers",
+      "keywords": [
+        "\\bdiaper\\b",
+        "\\bpull[- ]?ups?\\b",
+        "\\bhuggies\\b",
+        "\\bpampers\\b",
+        "\\bluvs\\b",
+        "\\btraining pants?\\b.*\\b(toddler|baby)\\b",
+        "\\bbaby wipes?\\b"
+      ],
+      "exclude": [
+        "\\bswim diaper\\b"
+      ]
+    }
+  ]
+}

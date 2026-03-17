@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NH Grocery Price Comparison</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #212529;
+            --text-muted: #6c757d;
+            --border: #dee2e6;
+            --accent: #0d6efd;
+            --green: #198754;
+            --green-light: #d1e7dd;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 1.5rem 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        header h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+
+        .summary-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 0.75rem;
+        }
+
+        .summary-stat {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .summary-stat strong { color: var(--accent); }
+
+        /* Filter bar */
+        .filters {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .filter-row + .filter-row { margin-top: 0.75rem; }
+
+        .filter-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--text-muted);
+            min-width: 55px;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(13,110,253,0.15); }
+
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .filter-chip {
+            padding: 0.25rem 0.65rem;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            user-select: none;
+            background: var(--card-bg);
+            transition: all 0.15s;
+        }
+
+        .filter-chip:hover { border-color: var(--accent); }
+        .filter-chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .filter-chip.chip-sale.active { background: #856404; border-color: #856404; }
+        .filter-chip.chip-everyday.active { background: #0f5132; border-color: #0f5132; }
+
+        /* Store chips use store colors when active */
+        .filter-chip.chip-walmart.active     { background: #0071ce; border-color: #0071ce; }
+        .filter-chip.chip-aldi.active        { background: #00005f; border-color: #00005f; }
+        .filter-chip.chip-market-basket.active { background: #d32f2f; border-color: #d32f2f; }
+        .filter-chip.chip-shaws.active       { background: #e65100; border-color: #e65100; }
+        .filter-chip.chip-hannaford.active   { background: #2e7d32; border-color: #2e7d32; }
+        .filter-chip.chip-bjs.active         { background: #7b1fa2; border-color: #7b1fa2; }
+        .filter-chip.chip-sams-club.active   { background: #0060a9; border-color: #0060a9; }
+        .filter-chip.chip-costco.active      { background: #e31837; border-color: #e31837; }
+
+        .filter-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-clear {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .btn-clear:hover { color: var(--text); border-color: var(--text-muted); }
+
+        .filter-count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .filter-count strong { color: var(--accent); }
+
+        /* Actions */
+        .actions {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .btn-refresh {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-refresh:hover { opacity: 0.85; }
+        .btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .refresh-status {
+            text-align: center;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Category grid */
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .category-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .category-card.hidden { display: none; }
+
+        .category-header {
+            padding: 0.75rem 1rem;
+            background: var(--text);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        .deal-count {
+            background: rgba(255,255,255,0.2);
+            padding: 0.15rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .category-body { padding: 0; }
+
+        .no-deals {
+            padding: 1.5rem 1rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .deals-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .deals-table th {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 2px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .deals-table td {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .deals-table tr:last-child td { border-bottom: none; }
+        .deals-table tr.cheapest td { background: var(--green-light); }
+        .deals-table tr.filtered-out { display: none; }
+
+        .price { font-weight: 700; white-space: nowrap; }
+
+        .product-name {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .store-badge {
+            display: inline-block;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+        }
+
+        .store-walmart       { background: #0071ce; }
+        .store-aldi          { background: #00005f; }
+        .store-market-basket { background: #d32f2f; }
+        .store-shaws         { background: #e65100; }
+        .store-hannaford     { background: #2e7d32; }
+        .store-bjs           { background: #7b1fa2; }
+        .store-sams-club     { background: #0060a9; }
+        .store-costco        { background: #e31837; }
+        .store-default       { background: var(--text-muted); }
+
+        .valid-date { font-size: 0.75rem; color: var(--text-muted); }
+
+        .price-type {
+            display: inline-block;
+            padding: 0.05rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .price-type-sale { background: #fff3cd; color: #856404; }
+        .price-type-everyday { background: #d1e7dd; color: #0f5132; }
+
+        .unit-price { font-size: 0.75rem; color: var(--text-muted); }
+
+        .btn-show-more {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 0.3rem 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--accent);
+            cursor: pointer;
+        }
+
+        .btn-show-more:hover { background: var(--bg); }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 0.5rem; }
+            header h1 { font-size: 1.3rem; }
+            .category-grid { grid-template-columns: 1fr; }
+            .product-name { max-width: 140px; }
+            .filter-row { gap: 0.5rem; }
+            .filter-label { min-width: 100%; }
+            .search-input { min-width: 0; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>NH Grocery Price Comparison</h1>
+        <p>Sale + everyday prices for Concord, NH area ({{ postal_code }})</p>
+        <div class="summary-bar">
+            <div class="summary-stat"><strong>{{ stores|length }}</strong> stores</div>
+            <div class="summary-stat"><strong>{{ total_deals }}</strong> categorized deals</div>
+            <div class="summary-stat"><strong>{{ total_items }}</strong> total items</div>
+            <div class="summary-stat">Updated: <strong>{{ timestamp[:16] }}</strong></div>
+        </div>
+    </header>
+
+    <div class="filters">
+        <div class="filter-row">
+            <span class="filter-label">Search</span>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search products... (e.g. green beans, pasta, charmin)" oninput="applyFilters()">
+        </div>
+        <div class="filter-row">
+            <span class="filter-label">Stores</span>
+            <div class="filter-chips" id="storeFilters">
+                {% for store in stores %}
+                <span class="filter-chip chip-{{ store|lower|replace("'", '')|replace(' ', '-') }} active"
+                      data-store="{{ store }}" onclick="toggleChip(this); applyFilters()">{{ store }}</span>
+                {% endfor %}
+            </div>
+            <div class="filter-actions">
+                <button class="btn-clear" onclick="selectAllStores(true)">All</button>
+                <button class="btn-clear" onclick="selectAllStores(false)">None</button>
+            </div>
+        </div>
+        <div class="filter-row">
+            <span class="filter-label">Type</span>
+            <div class="filter-chips" id="typeFilters">
+                <span class="filter-chip chip-sale active" data-type="sale" onclick="toggleChip(this); applyFilters()">Sale</span>
+                <span class="filter-chip chip-everyday active" data-type="everyday" onclick="toggleChip(this); applyFilters()">Everyday</span>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-clear" onclick="clearAllFilters()">Reset All</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-count" id="filterCount"></div>
+
+    <div class="actions">
+        <button class="btn-refresh" id="refreshBtn" onclick="refreshData()">Refresh Data</button>
+        <div class="refresh-status" id="refreshStatus"></div>
+    </div>
+
+    <div class="category-grid" id="categoryGrid">
+        {% for cat in categories %}
+        <div class="category-card" data-cat-id="{{ cat.id }}">
+            <div class="category-header">
+                <h2>{{ cat.name }}</h2>
+                <span class="deal-count" data-original-count="{{ cat.deal_count }}">{{ cat.deal_count }} deal{{ 's' if cat.deal_count != 1 }}</span>
+            </div>
+            <div class="category-body">
+                {% if cat.deals %}
+                <table class="deals-table">
+                    <thead>
+                        <tr>
+                            <th>Price</th>
+                            <th>Product</th>
+                            <th>Store</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for deal in cat.deals %}
+                        <tr data-store="{{ deal.store }}"
+                            data-type="{{ deal.price_type }}"
+                            data-name="{{ deal.name|lower }}"
+                            data-brand="{{ (deal.brand or '')|lower }}"
+                            data-price="{{ deal.price }}">
+                            <td class="price">
+                                ${{ "%.2f"|format(deal.price) }}
+                                {% if deal.unit_price %}
+                                <br><span class="unit-price">${{ "%.3f"|format(deal.unit_price) }}/{{ deal.unit }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="product-name" title="{{ deal.name }}">
+                                {{ deal.name }}
+                                <br>
+                                <span class="price-type price-type-{{ deal.price_type }}">{{ deal.price_type }}</span>
+                                {% if deal.valid_to %}
+                                <span class="valid-date">until {{ deal.valid_to[:10] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="store-badge store-{{ deal.store|lower|replace("'", '')|replace(' ', '-') }}{% if deal.store|lower|replace("'", '')|replace(' ', '-') not in ['walmart','aldi','market-basket','shaws','hannaford','bjs','sams-club','costco'] %} store-default{% endif %}">
+                                    {{ deal.store }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-deals">No deals found this week</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <footer>
+        Data from Flipp weekly flyers + Aldi.us catalog &bull; Not affiliated with any store<br>
+        <span class="price-type price-type-sale">sale</span> = this week's flyer deal &nbsp;
+        <span class="price-type price-type-everyday">everyday</span> = regular catalog price<br>
+        Built for NH food pantries, mutual aid orgs, and budget-conscious families
+    </footer>
+
+    <script>
+        function toggleChip(el) {
+            el.classList.toggle('active');
+        }
+
+        function selectAllStores(select) {
+            document.querySelectorAll('#storeFilters .filter-chip').forEach(function(chip) {
+                if (select) chip.classList.add('active');
+                else chip.classList.remove('active');
+            });
+            applyFilters();
+        }
+
+        function clearAllFilters() {
+            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('.filter-chip').forEach(function(chip) {
+                chip.classList.add('active');
+            });
+            applyFilters();
+        }
+
+        function getActiveStores() {
+            var stores = [];
+            document.querySelectorAll('#storeFilters .filter-chip.active').forEach(function(chip) {
+                stores.push(chip.getAttribute('data-store'));
+            });
+            return stores;
+        }
+
+        function getActiveTypes() {
+            var types = [];
+            document.querySelectorAll('#typeFilters .filter-chip.active').forEach(function(chip) {
+                types.push(chip.getAttribute('data-type'));
+            });
+            return types;
+        }
+
+        function applyFilters() {
+            var query = document.getElementById('searchInput').value.toLowerCase().trim();
+            var activeStores = getActiveStores();
+            var activeTypes = getActiveTypes();
+            var totalVisible = 0;
+            var totalAll = 0;
+
+            document.querySelectorAll('.category-card').forEach(function(card) {
+                var rows = card.querySelectorAll('tbody tr');
+                var visibleInCard = 0;
+                var cheapestFound = false;
+
+                rows.forEach(function(row) {
+                    totalAll++;
+                    var store = row.getAttribute('data-store');
+                    var type = row.getAttribute('data-type');
+                    var name = row.getAttribute('data-name') || '';
+                    var brand = row.getAttribute('data-brand') || '';
+
+                    var matchStore = activeStores.indexOf(store) !== -1;
+                    var matchType = activeTypes.indexOf(type) !== -1;
+                    var matchSearch = !query || name.indexOf(query) !== -1 || brand.indexOf(query) !== -1;
+
+                    if (matchStore && matchType && matchSearch) {
+                        row.classList.remove('filtered-out');
+                        row.style.display = '';
+                        visibleInCard++;
+                        totalVisible++;
+
+                        // Highlight cheapest visible row
+                        if (!cheapestFound) {
+                            row.classList.add('cheapest');
+                            cheapestFound = true;
+                        } else {
+                            row.classList.remove('cheapest');
+                        }
+                    } else {
+                        row.classList.add('filtered-out');
+                        row.classList.remove('cheapest');
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Update deal count badge
+                var badge = card.querySelector('.deal-count');
+                if (badge) {
+                    badge.textContent = visibleInCard + ' deal' + (visibleInCard !== 1 ? 's' : '');
+                }
+
+                // Show/hide "no deals" message
+                var noDeals = card.querySelector('.no-deals');
+                var table = card.querySelector('.deals-table');
+
+                if (visibleInCard === 0) {
+                    if (table) table.style.display = 'none';
+                    if (!noDeals) {
+                        var div = document.createElement('div');
+                        div.className = 'no-deals filter-empty-msg';
+                        div.textContent = 'No matching deals';
+                        card.querySelector('.category-body').appendChild(div);
+                    } else {
+                        noDeals.style.display = '';
+                        noDeals.textContent = 'No matching deals';
+                    }
+                } else {
+                    if (table) table.style.display = '';
+                    var filterMsg = card.querySelector('.filter-empty-msg');
+                    if (filterMsg) filterMsg.remove();
+                    if (noDeals && !noDeals.classList.contains('filter-empty-msg')) {
+                        noDeals.style.display = 'none';
+                    }
+                }
+
+                // Hide entire card if no original deals and no filter matches
+                var originalCount = parseInt(badge ? badge.getAttribute('data-original-count') : '0');
+                if (originalCount === 0 && visibleInCard === 0) {
+                    card.classList.add('hidden');
+                } else {
+                    card.classList.remove('hidden');
+                }
+            });
+
+            // Update filter count display
+            var countEl = document.getElementById('filterCount');
+            var hasFilters = query || activeStores.length < document.querySelectorAll('#storeFilters .filter-chip').length || activeTypes.length < 2;
+            if (hasFilters) {
+                countEl.textContent = 'Showing ' + totalVisible + ' of ' + totalAll + ' deals';
+                countEl.style.display = '';
+            } else {
+                countEl.style.display = 'none';
+            }
+        }
+
+        function refreshData() {
+            var btn = document.getElementById('refreshBtn');
+            var status = document.getElementById('refreshStatus');
+            btn.disabled = true;
+            btn.textContent = 'Refreshing...';
+            status.textContent = 'Fetching latest flyer data...';
+
+            fetch('/api/refresh')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    status.textContent = 'Data refreshed! Reloading page...';
+                    setTimeout(function() { window.location.reload(); }, 500);
+                })
+                .catch(function(err) {
+                    status.textContent = 'Refresh failed: ' + err.message;
+                    btn.disabled = false;
+                    btn.textContent = 'Refresh Data';
+                });
+        }
+
+        // Run on page load to initialize state
+        document.getElementById('filterCount').style.display = 'none';
+    </script>
+</body>
+</html>

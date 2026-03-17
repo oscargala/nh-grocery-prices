@@ -1,0 +1,60 @@
+{
+  "stores": [
+    {
+      "id": "walmart",
+      "name": "Walmart",
+      "merchant_aliases": ["Walmart"],
+      "tier": 1,
+      "data_source": "flipp"
+    },
+    {
+      "id": "market_basket",
+      "name": "Market Basket",
+      "merchant_aliases": ["Market Basket", "Demoulas Market Basket"],
+      "tier": 1,
+      "data_source": "flipp"
+    },
+    {
+      "id": "aldi",
+      "name": "Aldi",
+      "merchant_aliases": ["ALDI"],
+      "tier": 1,
+      "data_source": "flipp"
+    },
+    {
+      "id": "shaws",
+      "name": "Shaw's",
+      "merchant_aliases": ["Shaw's"],
+      "tier": 1,
+      "data_source": "flipp"
+    },
+    {
+      "id": "hannaford",
+      "name": "Hannaford",
+      "merchant_aliases": ["Hannaford"],
+      "tier": 1,
+      "data_source": "flipp"
+    },
+    {
+      "id": "bjs",
+      "name": "BJ's Wholesale",
+      "merchant_aliases": ["BJ's Wholesale Club", "BJ's"],
+      "tier": 1,
+      "data_source": "flipp"
+    },
+    {
+      "id": "sams_club",
+      "name": "Sam's Club",
+      "merchant_aliases": ["Sam's Club"],
+      "tier": 1,
+      "data_source": "flipp"
+    },
+    {
+      "id": "costco",
+      "name": "Costco",
+      "merchant_aliases": ["Costco", "Costco "],
+      "tier": 1,
+      "data_source": "flipp"
+    }
+  ]
+}
