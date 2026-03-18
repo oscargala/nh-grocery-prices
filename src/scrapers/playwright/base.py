@@ -9,6 +9,7 @@ import random
 import re
 from abc import ABC, abstractmethod
 from dataclasses import asdict
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from playwright.async_api import BrowserContext, Page, Response
@@ -19,6 +20,9 @@ from .browser import PlaywrightManager
 CACHE_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data" / "cache"
 
 logger = logging.getLogger(__name__)
+
+# Default staleness threshold — skip categories scraped within this window
+DEFAULT_STALENESS_DAYS = 7
 
 # Common challenge page indicators
 CHALLENGE_INDICATORS = [
@@ -50,17 +54,23 @@ class PlaywrightStoreScraper(ABC):
         self,
         manager: PlaywrightManager,
         categories: list[CategoryDef],
+        categories_to_scrape: list[str] | None = None,
+        staleness_days: int = DEFAULT_STALENESS_DAYS,
     ) -> None:
         self.manager = manager
         self.categories = categories
+        self.categories_to_scrape = categories_to_scrape
+        self.staleness_days = staleness_days
         self._context: BrowserContext | None = None
         self._page: Page | None = None
 
     async def collect_all(self) -> list[FlyerProduct]:
         """Main entry point. Sets up context, scrapes, tears down.
 
-        On success, caches products to disk. On failure, falls back to
-        the last successful cache so the dashboard still shows data.
+        On success, merges new products into the per-category cache.
+        Always returns the full cache (all categories) so the dashboard
+        shows data even for categories not scraped this run.
+        On failure, falls back to the last successful cache.
         """
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -70,7 +80,7 @@ class PlaywrightStoreScraper(ABC):
 
                 categorized = [p for p in products if p.category]
                 logger.info(
-                    "%s: %d products, %d categorized (attempt %d)",
+                    "%s: %d new products, %d categorized (attempt %d)",
                     self.store_name,
                     len(products),
                     len(categorized),
@@ -79,10 +89,7 @@ class PlaywrightStoreScraper(ABC):
 
                 if products:
                     self._save_cache(products)
-                    return products
-
-                # Scrape succeeded but returned empty — likely bot-blocked
-                logger.warning("%s: scrape returned 0 products, loading cache", self.store_name)
+                # Return ALL cached products (including previously-scraped categories)
                 return self._load_cache()
 
             except Exception:
@@ -108,37 +115,139 @@ class PlaywrightStoreScraper(ABC):
     def _cache_path(self) -> Path:
         return CACHE_DIR / f"{self.store_id}.json"
 
-    def _save_cache(self, products: list[FlyerProduct]) -> None:
-        """Save products to disk cache."""
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        data = {
-            "store_id": self.store_id,
-            "timestamp": __import__("datetime").datetime.now().isoformat(),
-            "products": [asdict(p) for p in products],
-        }
-        self._cache_path().write_text(json.dumps(data, indent=2))
-        logger.info("%s: cached %d products to disk", self.store_name, len(products))
-
-    def _load_cache(self) -> list[FlyerProduct]:
-        """Load products from disk cache if available."""
+    def _load_cache_data(self) -> dict:
+        """Load the raw cache dict from disk, handling both old and new formats."""
         path = self._cache_path()
         if not path.exists():
-            logger.info("%s: no cache file found", self.store_name)
-            return []
+            return {}
         try:
             data = json.loads(path.read_text())
-            products = [FlyerProduct(**p) for p in data["products"]]
-            timestamp = data.get("timestamp", "unknown")
-            logger.info(
-                "%s: loaded %d cached products (from %s)",
-                self.store_name,
-                len(products),
-                timestamp,
-            )
-            return products
+            # Migrate old flat format to per-category format
+            if "products" in data and "categories" not in data:
+                return self._migrate_cache(data)
+            return data
         except Exception:
             logger.exception("%s: failed to load cache", self.store_name)
+            return {}
+
+    @staticmethod
+    def _migrate_cache(old_data: dict) -> dict:
+        """Convert old flat cache format to per-category structure."""
+        timestamp = old_data.get("timestamp", datetime.now().isoformat())
+        by_cat: dict[str, list[dict]] = {}
+        for p in old_data.get("products", []):
+            cat = p.get("category") or "uncategorized"
+            by_cat.setdefault(cat, []).append(p)
+
+        categories = {}
+        for cat_id, prods in by_cat.items():
+            categories[cat_id] = {
+                "scraped_at": timestamp,
+                "products": prods,
+            }
+        return {"store_id": old_data.get("store_id", ""), "categories": categories}
+
+    def _save_cache(self, products: list[FlyerProduct]) -> None:
+        """Merge new products into per-category cache with timestamps."""
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        now = datetime.now().isoformat()
+
+        # Load existing cache
+        data = self._load_cache_data()
+        data.setdefault("store_id", self.store_id)
+        data.setdefault("categories", {})
+
+        # Group new products by category
+        by_cat: dict[str, list[dict]] = {}
+        for p in products:
+            cat = p.category or "uncategorized"
+            by_cat.setdefault(cat, []).append(asdict(p))
+
+        # Merge: for each category in new results, replace that category's data
+        for cat_id, new_prods in by_cat.items():
+            data["categories"][cat_id] = {
+                "scraped_at": now,
+                "products": new_prods,
+            }
+
+        self._cache_path().write_text(json.dumps(data, indent=2))
+
+        total = sum(len(c["products"]) for c in data["categories"].values())
+        logger.info(
+            "%s: merged %d new products into cache (%d total across %d categories)",
+            self.store_name,
+            len(products),
+            total,
+            len(data["categories"]),
+        )
+
+    def _load_cache(self) -> list[FlyerProduct]:
+        """Load all products from the per-category cache."""
+        data = self._load_cache_data()
+        cats = data.get("categories", {})
+        if not cats:
+            logger.info("%s: no cache file found", self.store_name)
             return []
+
+        products = []
+        for cat_id, cat_data in cats.items():
+            for p in cat_data.get("products", []):
+                try:
+                    products.append(FlyerProduct(**p))
+                except Exception:
+                    pass
+
+        oldest = min((c["scraped_at"] for c in cats.values()), default="unknown")
+        newest = max((c["scraped_at"] for c in cats.values()), default="unknown")
+        logger.info(
+            "%s: loaded %d cached products across %d categories (oldest: %s, newest: %s)",
+            self.store_name,
+            len(products),
+            len(cats),
+            oldest[:10],
+            newest[:10],
+        )
+        return products
+
+    def _stale_categories(self, all_category_ids: list[str]) -> list[str]:
+        """Return category IDs that are stale or missing from cache, stalest first."""
+        data = self._load_cache_data()
+        cats = data.get("categories", {})
+        threshold = datetime.now() - timedelta(days=self.staleness_days)
+
+        stale = []
+        for cat_id in all_category_ids:
+            # If caller specified a subset, only consider those
+            if self.categories_to_scrape and cat_id not in self.categories_to_scrape:
+                continue
+            cat_data = cats.get(cat_id)
+            if not cat_data:
+                stale.append((cat_id, datetime.min))
+                continue
+            try:
+                scraped_at = datetime.fromisoformat(cat_data["scraped_at"])
+            except (KeyError, ValueError):
+                stale.append((cat_id, datetime.min))
+                continue
+            if scraped_at < threshold:
+                stale.append((cat_id, scraped_at))
+
+        # Sort stalest first
+        stale.sort(key=lambda x: x[1])
+        result = [cat_id for cat_id, _ in stale]
+
+        if result:
+            logger.info(
+                "%s: %d/%d categories are stale: %s",
+                self.store_name,
+                len(result),
+                len(all_category_ids),
+                ", ".join(result),
+            )
+        else:
+            logger.info("%s: all categories are fresh (within %d days)", self.store_name, self.staleness_days)
+
+        return result
 
     @abstractmethod
     async def _scrape(self) -> list[FlyerProduct]:

@@ -1,9 +1,10 @@
-"""Playwright browser lifecycle manager with stealth and cookie persistence."""
+"""Playwright browser lifecycle manager with stealth, fingerprint rotation, and cookie persistence."""
 
 from __future__ import annotations
 
 import json
 import logging
+import random
 from pathlib import Path
 
 from playwright.async_api import (
@@ -19,14 +20,103 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 DEFAULT_COOKIE_DIR = DATA_DIR / "cookies"
 
-# Recent Firefox on Windows — common residential profile
-DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"
-)
+# ---------------------------------------------------------------------------
+# Browser fingerprint profiles
+# ---------------------------------------------------------------------------
+# Each profile represents a realistic Firefox user with varying UA version,
+# viewport size, and platform.  A random profile is selected per session so
+# consecutive cron runs look like different users to Akamai / bot detectors.
+# ---------------------------------------------------------------------------
+
+BROWSER_PROFILES: list[dict] = [
+    # Windows 10 — most common desktop OS
+    {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+        "viewport": {"width": 1366, "height": 768},
+        "platform": "Win32",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0",
+        "viewport": {"width": 1920, "height": 1080},
+        "platform": "Win32",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0",
+        "viewport": {"width": 1536, "height": 864},
+        "platform": "Win32",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "viewport": {"width": 1440, "height": 900},
+        "platform": "Win32",
+    },
+    # Windows 11
+    {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+        "viewport": {"width": 1920, "height": 1080},
+        "platform": "Win32",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0",
+        "viewport": {"width": 2560, "height": 1440},
+        "platform": "Win32",
+    },
+    # macOS
+    {
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.6; rv:131.0) Gecko/20100101 Firefox/131.0",
+        "viewport": {"width": 1440, "height": 900},
+        "platform": "MacIntel",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.6; rv:130.0) Gecko/20100101 Firefox/130.0",
+        "viewport": {"width": 1680, "height": 1050},
+        "platform": "MacIntel",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:129.0) Gecko/20100101 Firefox/129.0",
+        "viewport": {"width": 1512, "height": 982},
+        "platform": "MacIntel",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "viewport": {"width": 1728, "height": 1117},
+        "platform": "MacIntel",
+    },
+    # Linux desktop
+    {
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0",
+        "viewport": {"width": 1920, "height": 1080},
+        "platform": "Linux x86_64",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
+        "viewport": {"width": 1366, "height": 768},
+        "platform": "Linux x86_64",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0",
+        "viewport": {"width": 1600, "height": 900},
+        "platform": "Linux x86_64",
+    },
+    {
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "viewport": {"width": 2560, "height": 1440},
+        "platform": "Linux x86_64",
+    },
+    # Windows 10 — additional common resolutions
+    {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0",
+        "viewport": {"width": 1280, "height": 720},
+        "platform": "Win32",
+    },
+]
 
 
 class PlaywrightManager:
     """Manages a single Playwright browser instance across all store scrapers.
+
+    Selects a random browser fingerprint profile per session so consecutive
+    runs look like different users.
 
     Usage:
         async with PlaywrightManager() as manager:
@@ -41,13 +131,18 @@ class PlaywrightManager:
         self,
         headless: bool = True,
         cookie_dir: Path | None = None,
-        user_agent: str | None = None,
+        profile: dict | None = None,
     ) -> None:
         self.headless = headless
         self.cookie_dir = cookie_dir or DEFAULT_COOKIE_DIR
-        self.user_agent = user_agent or DEFAULT_USER_AGENT
+        # Pick a random fingerprint profile for this session
+        self.profile = profile or random.choice(BROWSER_PROFILES)
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
+
+    @property
+    def user_agent(self) -> str:
+        return self.profile["user_agent"]
 
     async def __aenter__(self) -> PlaywrightManager:
         await self.start()
@@ -68,9 +163,10 @@ class PlaywrightManager:
             },
         )
         logger.info(
-            "Browser started (headless=%s, pid=%s)",
+            "Browser started (headless=%s, profile=%s %s)",
             self.headless,
-            self._browser.contexts,
+            self.profile["platform"],
+            self.profile["viewport"],
         )
 
     async def stop(self) -> None:
@@ -91,13 +187,14 @@ class PlaywrightManager:
         """Create a new browser context with stored cookies for this store.
 
         Each store gets its own context (isolated cookies/storage).
+        Uses the session's randomly-selected fingerprint profile.
         """
         if self._browser is None:
             raise RuntimeError("Browser not started — use 'async with' or call start()")
 
         context = await self._browser.new_context(
-            viewport={"width": 1366, "height": 768},
-            user_agent=self.user_agent,
+            viewport=self.profile["viewport"],
+            user_agent=self.profile["user_agent"],
             locale="en-US",
             timezone_id="America/New_York",
             # Accept common web content
@@ -111,6 +208,12 @@ class PlaywrightManager:
         # Apply stealth patches
         stealth = Stealth()
         await stealth.apply_stealth_async(context)
+
+        # Override navigator.platform to match the selected profile
+        platform = self.profile.get("platform", "Win32")
+        await context.add_init_script(
+            f"Object.defineProperty(navigator, 'platform', {{get: () => '{platform}'}})"
+        )
 
         # Load persisted cookies if available
         cookie_file = self._cookie_path(store_id)

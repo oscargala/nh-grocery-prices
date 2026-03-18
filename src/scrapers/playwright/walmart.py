@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import re
 
 from ...models import FlyerProduct
@@ -56,20 +57,26 @@ class WalmartScraper(PlaywrightStoreScraper):
         """Load Walmart search pages and extract products from __NEXT_DATA__.
 
         Stops after first bot detection to avoid burning the session.
-        Rotates which category goes first each run so we cover all categories
-        across multiple pipeline runs.
+        Prioritizes stalest categories first so incremental runs fill in
+        coverage across the full category set.
         """
         page = self._page
         all_products: list[FlyerProduct] = []
         seen_ids: set[str] = set()
 
-        # Rotate category order using a simple hash of today's date
-        from datetime import date
-        cat_items = list(CATEGORY_SEARCHES.items())
-        offset = date.today().toordinal() % len(cat_items)
-        cat_items = cat_items[offset:] + cat_items[:offset]
+        # Warm the session with organic-looking browsing before searching
+        await self._warm_session(page)
 
-        for cat_id, search_terms in cat_items:
+        # Determine which categories to scrape — stalest first
+        all_cat_ids = list(CATEGORY_SEARCHES.keys())
+        stale_ids = self._stale_categories(all_cat_ids)
+
+        if not stale_ids:
+            logger.info("Walmart: all categories fresh, nothing to scrape")
+            return self._load_cache()
+
+        for cat_id in stale_ids:
+            search_terms = CATEGORY_SEARCHES.get(cat_id, [])
             for term in search_terms:
                 try:
                     products = await self._search_products(page, term, cat_id, seen_ids)
@@ -84,7 +91,63 @@ class WalmartScraper(PlaywrightStoreScraper):
                     return all_products
                 await self._random_delay()
 
+                # Occasionally browse a non-search page between searches to look organic
+                if len(all_products) > 0 and random.random() < 0.3:
+                    await self._browse_organic(page)
+
         return all_products
+
+    async def _warm_session(self, page) -> None:
+        """Browse Walmart organically before searching to establish a human-like session."""
+        try:
+            logger.info("Walmart: warming session with organic browsing")
+
+            # Load homepage
+            await page.goto(self.base_url, wait_until="domcontentloaded", timeout=30000)
+            await page.wait_for_timeout(random.randint(2000, 4000))
+
+            # Scroll down a bit like a real user
+            await page.evaluate("window.scrollBy(0, Math.random() * 600 + 200)")
+            await page.wait_for_timeout(random.randint(1000, 3000))
+
+            # Click a department link if available
+            dept_links = [
+                "/cp/food/976759",
+                "/cp/household-essentials/1115193",
+                "/cp/pantry-snacks/1735450",
+            ]
+            dept = random.choice(dept_links)
+            try:
+                await page.goto(
+                    f"{self.base_url}{dept}",
+                    wait_until="domcontentloaded",
+                    timeout=30000,
+                )
+                await page.wait_for_timeout(random.randint(2000, 5000))
+                await page.evaluate("window.scrollBy(0, Math.random() * 800 + 300)")
+                await page.wait_for_timeout(random.randint(1000, 2000))
+            except Exception:
+                logger.debug("Walmart: department page browse failed, continuing")
+
+            logger.info("Walmart: session warming complete")
+        except Exception:
+            logger.warning("Walmart: session warming failed, proceeding to search")
+
+    async def _browse_organic(self, page) -> None:
+        """Briefly visit a non-search page between searches to look organic."""
+        try:
+            filler_pages = [
+                "/cp/food/976759",
+                "/cp/household-essentials/1115193",
+                "/",
+            ]
+            url = f"{self.base_url}{random.choice(filler_pages)}"
+            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(random.randint(2000, 4000))
+            await page.evaluate("window.scrollBy(0, Math.random() * 500 + 100)")
+            await page.wait_for_timeout(random.randint(1000, 2000))
+        except Exception:
+            pass  # Non-critical
 
     async def _search_products(
         self,

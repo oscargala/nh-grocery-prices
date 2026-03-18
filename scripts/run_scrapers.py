@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import csv
 import json
@@ -26,15 +27,51 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
 
 
-async def _run_playwright_scrapers(categories) -> list:
-    """Run all enabled Playwright scrapers with a shared browser."""
+async def _run_playwright_scrapers(
+    categories,
+    categories_to_scrape: list[str] | None = None,
+    staleness_days: int = 7,
+) -> list:
+    """Run Walmart API scraper (GraphQL replay) first, then fall back to
+    standard Playwright scrapers for any remaining stores.
+
+    The API scraper uses Playwright only for a single page load to capture
+    auth tokens, then replays all remaining searches via httpx — much faster
+    and less likely to trigger bot detection.
+    """
     from src.scrapers.playwright import PlaywrightManager, SCRAPERS
+    from src.scrapers.walmart_api import WalmartAPIScraper
 
     all_products = []
+    walmart_handled = False
+
     try:
         async with PlaywrightManager() as manager:
+            # Try the GraphQL API replay approach for Walmart first
+            try:
+                api_scraper = WalmartAPIScraper(
+                    manager=manager,
+                    categories=categories,
+                    categories_to_scrape=categories_to_scrape,
+                    staleness_days=staleness_days,
+                )
+                products = await api_scraper.collect_all()
+                all_products.extend(products)
+                walmart_handled = True
+                logger.info("WalmartAPI: %d products", len(products))
+            except Exception:
+                logger.exception("WalmartAPI scraper failed, will try Playwright fallback")
+
+            # Run remaining Playwright scrapers (skip Walmart if API succeeded)
             for scraper_cls in SCRAPERS:
-                scraper = scraper_cls(manager=manager, categories=categories)
+                if walmart_handled and scraper_cls.store_id == "walmart":
+                    continue
+                scraper = scraper_cls(
+                    manager=manager,
+                    categories=categories,
+                    categories_to_scrape=categories_to_scrape,
+                    staleness_days=staleness_days,
+                )
                 try:
                     products = await scraper.collect_all()
                     all_products.extend(products)
@@ -51,8 +88,18 @@ async def _run_playwright_scrapers(categories) -> list:
     return all_products
 
 
-def run_pipeline(postal_code: str = "03301") -> dict:
+def run_pipeline(
+    postal_code: str = "03301",
+    categories_to_scrape: list[str] | None = None,
+    staleness_days: int = 7,
+) -> dict:
     """Run the full scraping pipeline and return structured results.
+
+    Args:
+        postal_code: ZIP code for Flipp flyer lookups.
+        categories_to_scrape: If set, only scrape these category IDs
+            in Playwright scrapers (e.g., for cron drip scheduling).
+        staleness_days: Skip categories scraped within this many days.
 
     Returns:
         {
@@ -82,7 +129,9 @@ def run_pipeline(postal_code: str = "03301") -> dict:
     logger.info("Aldi catalog: %d products, total: %d", len(aldi_products), len(all_products))
 
     # Playwright scrapers (everyday prices from stores behind anti-bot protection)
-    playwright_products = asyncio.run(_run_playwright_scrapers(categories))
+    playwright_products = asyncio.run(
+        _run_playwright_scrapers(categories, categories_to_scrape, staleness_days)
+    )
     all_products.extend(playwright_products)
     logger.info("Playwright: %d products, total: %d", len(playwright_products), len(all_products))
 
@@ -162,13 +211,47 @@ def save_csv(result: dict) -> Path:
     return csv_path
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Scrape grocery prices and generate comparison reports.",
+    )
+    parser.add_argument(
+        "--categories",
+        nargs="+",
+        metavar="CAT",
+        help=(
+            "Only scrape these category IDs in Playwright scrapers "
+            "(e.g., --categories canned_vegetables pasta rice). "
+            "Useful for cron drip scheduling where each job handles a subset."
+        ),
+    )
+    parser.add_argument(
+        "--staleness-days",
+        type=int,
+        default=7,
+        metavar="DAYS",
+        help="Skip Playwright categories scraped within this many days (default: 7).",
+    )
+    parser.add_argument(
+        "--zip",
+        default="03301",
+        help="ZIP code for Flipp flyer lookups (default: 03301).",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
 
-    result = run_pipeline()
+    args = parse_args()
+    result = run_pipeline(
+        postal_code=args.zip,
+        categories_to_scrape=args.categories,
+        staleness_days=args.staleness_days,
+    )
     print_summary(result)
     csv_path = save_csv(result)
     print(f"\nCSV saved to: {csv_path}")
