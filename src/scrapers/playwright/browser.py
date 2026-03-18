@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import random
 from pathlib import Path
 
@@ -132,11 +133,14 @@ class PlaywrightManager:
         headless: bool = True,
         cookie_dir: Path | None = None,
         profile: dict | None = None,
+        proxy_url: str | None = None,
     ) -> None:
         self.headless = headless
         self.cookie_dir = cookie_dir or DEFAULT_COOKIE_DIR
         # Pick a random fingerprint profile for this session
         self.profile = profile or random.choice(BROWSER_PROFILES)
+        # Proxy: explicit arg > PROXY_URL env var > no proxy
+        self.proxy_url = proxy_url or os.environ.get("PROXY_URL")
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
 
@@ -154,17 +158,22 @@ class PlaywrightManager:
     async def start(self) -> None:
         """Launch Firefox with stealth-friendly configuration."""
         self._playwright = await async_playwright().start()
-        self._browser = await self._playwright.firefox.launch(
-            headless=self.headless,
-            firefox_user_prefs={
-                # Reduce fingerprinting signals
-                "privacy.resistFingerprinting": False,  # breaks some sites if True
-                "media.peerconnection.enabled": False,  # disable WebRTC IP leak
+
+        launch_kwargs: dict = {
+            "headless": self.headless,
+            "firefox_user_prefs": {
+                "privacy.resistFingerprinting": False,
+                "media.peerconnection.enabled": False,
             },
-        )
+        }
+        if self.proxy_url:
+            launch_kwargs["proxy"] = {"server": self.proxy_url}
+
+        self._browser = await self._playwright.firefox.launch(**launch_kwargs)
         logger.info(
-            "Browser started (headless=%s, profile=%s %s)",
+            "Browser started (headless=%s, proxy=%s, profile=%s %s)",
             self.headless,
+            self.proxy_url or "none",
             self.profile["platform"],
             self.profile["viewport"],
         )

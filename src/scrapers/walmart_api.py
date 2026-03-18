@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import random
 import re
 from dataclasses import asdict
@@ -281,10 +282,12 @@ class WalmartAPIScraper:
         all_products: list[FlyerProduct] = []
         seen_ids: set[str] = set()
 
+        proxy_url = os.environ.get("PROXY_URL")
         async with httpx.AsyncClient(
             timeout=30.0,
             cookies=session.cookies,
             follow_redirects=True,
+            proxy=proxy_url,
         ) as client:
             for cat_id in category_ids:
                 search_terms = CATEGORY_SEARCHES.get(cat_id, [])
