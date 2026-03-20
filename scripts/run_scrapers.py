@@ -27,17 +27,43 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
 
 
+async def _run_walmart_stealth(
+    categories,
+    categories_to_scrape: list[str] | None = None,
+    staleness_days: int = 7,
+) -> list | None:
+    """Try Walmart stealth scraper (Camoufox + Xvfb). Returns products or None on failure."""
+    try:
+        from src.scrapers.walmart_stealth import WalmartStealthScraper
+    except ImportError:
+        logger.info("WalmartStealth: camoufox not available, skipping")
+        return None
+
+    try:
+        scraper = WalmartStealthScraper(
+            categories=categories,
+            categories_to_scrape=categories_to_scrape,
+            staleness_days=staleness_days,
+        )
+        products = await scraper.collect_all()
+        logger.info("WalmartStealth: %d products", len(products))
+        return products
+    except Exception:
+        logger.exception("WalmartStealth scraper failed")
+        return None
+
+
 async def _run_playwright_scrapers(
     categories,
     categories_to_scrape: list[str] | None = None,
     staleness_days: int = 7,
 ) -> list:
-    """Run Walmart API scraper (GraphQL replay) first, then fall back to
-    standard Playwright scrapers for any remaining stores.
+    """Run Walmart scrapers in priority order, then remaining Playwright scrapers.
 
-    The API scraper uses Playwright only for a single page load to capture
-    auth tokens, then replays all remaining searches via httpx — much faster
-    and less likely to trigger bot detection.
+    Priority for Walmart:
+    1. Stealth scraper (Camoufox + Xvfb) — best anti-bot bypass
+    2. GraphQL API replay — fast but tokens expire quickly
+    3. Standard Playwright — fallback, often blocked
     """
     from src.scrapers.playwright import PlaywrightManager, SCRAPERS
     from src.scrapers.walmart_api import WalmartAPIScraper
@@ -45,24 +71,33 @@ async def _run_playwright_scrapers(
     all_products = []
     walmart_handled = False
 
+    # 1. Try stealth scraper first (Camoufox + Xvfb)
+    stealth_products = await _run_walmart_stealth(
+        categories, categories_to_scrape, staleness_days
+    )
+    if stealth_products is not None:
+        all_products.extend(stealth_products)
+        walmart_handled = True
+
     try:
         async with PlaywrightManager() as manager:
-            # Try the GraphQL API replay approach for Walmart first
-            try:
-                api_scraper = WalmartAPIScraper(
-                    manager=manager,
-                    categories=categories,
-                    categories_to_scrape=categories_to_scrape,
-                    staleness_days=staleness_days,
-                )
-                products = await api_scraper.collect_all()
-                all_products.extend(products)
-                walmart_handled = True
-                logger.info("WalmartAPI: %d products", len(products))
-            except Exception:
-                logger.exception("WalmartAPI scraper failed, will try Playwright fallback")
+            # 2. Try GraphQL API replay if stealth didn't handle Walmart
+            if not walmart_handled:
+                try:
+                    api_scraper = WalmartAPIScraper(
+                        manager=manager,
+                        categories=categories,
+                        categories_to_scrape=categories_to_scrape,
+                        staleness_days=staleness_days,
+                    )
+                    products = await api_scraper.collect_all()
+                    all_products.extend(products)
+                    walmart_handled = True
+                    logger.info("WalmartAPI: %d products", len(products))
+                except Exception:
+                    logger.exception("WalmartAPI scraper failed, will try Playwright fallback")
 
-            # Run remaining Playwright scrapers (skip Walmart if API succeeded)
+            # 3. Run remaining Playwright scrapers (skip Walmart if already handled)
             for scraper_cls in SCRAPERS:
                 if walmart_handled and scraper_cls.store_id == "walmart":
                     continue
