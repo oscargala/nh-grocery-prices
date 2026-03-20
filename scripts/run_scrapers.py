@@ -27,29 +27,34 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
 
 
-async def _run_walmart_stealth(
+async def _run_camoufox_scraper(
+    scraper_name: str,
+    scraper_cls_path: str,
     categories,
     categories_to_scrape: list[str] | None = None,
     staleness_days: int = 7,
 ) -> list | None:
-    """Try Walmart stealth scraper (Camoufox + Xvfb). Returns products or None on failure."""
+    """Try a Camoufox-based stealth scraper. Returns products or None on failure."""
     try:
-        from src.scrapers.walmart_stealth import WalmartStealthScraper
-    except ImportError:
-        logger.info("WalmartStealth: camoufox not available, skipping")
+        import importlib
+        module_path, cls_name = scraper_cls_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        scraper_cls = getattr(module, cls_name)
+    except (ImportError, AttributeError):
+        logger.info("%s: camoufox not available, skipping", scraper_name)
         return None
 
     try:
-        scraper = WalmartStealthScraper(
+        scraper = scraper_cls(
             categories=categories,
             categories_to_scrape=categories_to_scrape,
             staleness_days=staleness_days,
         )
         products = await scraper.collect_all()
-        logger.info("WalmartStealth: %d products", len(products))
+        logger.info("%s: %d products", scraper_name, len(products))
         return products
     except Exception:
-        logger.exception("WalmartStealth scraper failed")
+        logger.exception("%s scraper failed", scraper_name)
         return None
 
 
@@ -71,13 +76,21 @@ async def _run_playwright_scrapers(
     all_products = []
     walmart_handled = False
 
-    # 1. Try stealth scraper first (Camoufox + Xvfb)
-    stealth_products = await _run_walmart_stealth(
-        categories, categories_to_scrape, staleness_days
+    # 1. Camoufox stealth scrapers (Walmart + Sam's Club)
+    stealth_products = await _run_camoufox_scraper(
+        "WalmartStealth", "src.scrapers.walmart_stealth.WalmartStealthScraper",
+        categories, categories_to_scrape, staleness_days,
     )
     if stealth_products is not None:
         all_products.extend(stealth_products)
         walmart_handled = True
+
+    sams_products = await _run_camoufox_scraper(
+        "SamsClub", "src.scrapers.samsclub_stealth.SamsClubStealthScraper",
+        categories, categories_to_scrape, staleness_days,
+    )
+    if sams_products is not None:
+        all_products.extend(sams_products)
 
     try:
         async with PlaywrightManager() as manager:
