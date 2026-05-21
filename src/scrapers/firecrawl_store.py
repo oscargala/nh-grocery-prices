@@ -282,9 +282,21 @@ class FirecrawlStoreScraper:
         for cat_data in cats.values():
             for p in cat_data.get("products", []):
                 try:
-                    products.append(FlyerProduct(**p))
+                    product = FlyerProduct(**p)
                 except Exception:
-                    pass
+                    continue
+                # Re-categorize against the current categories.json so a category
+                # schema change takes effect without re-scraping. Drop products
+                # whose names no longer match any current category.
+                new_cat = categorize_item(product.name, self.categories)
+                if new_cat is None and product.brand:
+                    new_cat = categorize_item(
+                        f"{product.brand} {product.name}", self.categories
+                    )
+                if new_cat is None:
+                    continue
+                product.category = new_cat
+                products.append(product)
         if cats:
             oldest = min((c["scraped_at"] for c in cats.values()), default="?")
             newest = max((c["scraped_at"] for c in cats.values()), default="?")

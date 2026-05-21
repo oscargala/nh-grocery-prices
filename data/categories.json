@@ -20,8 +20,11 @@
         "\\bcorn chips?\\b",
         "\\bcorned beef\\b",
         "\\bcandy corn\\b",
-        "\\bbean (bag|coffee)\\b",
-        "\\bjelly bean\\b"
+        "\\bbean (bag|coffee|sprout)\\b",
+        "\\bcoffee\\b.*\\bbean\\b",
+        "\\bespresso\\b.*\\bbean\\b",
+        "\\bjelly bean\\b",
+        "\\b(butter|cocoa|vanilla|jelly|coffee) bean\\b"
       ]
     },
     {
@@ -245,6 +248,571 @@
       ],
       "exclude": [
         "\\bswim diaper\\b"
+      ]
+    },
+    {
+      "id": "milk",
+      "name": "Milk",
+      "keywords": [
+        "\\bmilk\\b",
+        "\\bhalf[- ]and[- ]half\\b",
+        "\\bheavy (whipping )?cream\\b",
+        "\\blactaid\\b"
+      ],
+      "exclude": [
+        "\\bmilk chocolate\\b",
+        "\\b(soap|lotion|bath|body wash)\\b.*\\bmilk\\b",
+        "\\bmilkshake\\b",
+        "\\bcondensed milk\\b",
+        "\\bevaporated milk\\b",
+        "\\bmilk powder\\b",
+        "\\bmilk[- ]bone\\b",
+        "\\bmilk dud\\b",
+        "\\bcoconut milk\\b.*\\bcan\\b"
+      ]
+    },
+    {
+      "id": "eggs",
+      "name": "Eggs",
+      "keywords": [
+        "\\beggs?\\b",
+        "\\beggland'?s best\\b"
+      ],
+      "exclude": [
+        "\\begg (nog|roll|noodle|wash|wrap)\\b",
+        "\\bdeviled eggs?\\b",
+        "\\beaster eggs?\\b",
+        "\\beggplant\\b",
+        "\\b(scotch|easter|chocolate|candy|cadbury) eggs?\\b",
+        "\\bjust crack an egg\\b",
+        "\\begg roll\\b",
+        "\\begg sandwich\\b",
+        "\\begg bites?\\b.*\\bfrozen\\b"
+      ]
+    },
+    {
+      "id": "cheese",
+      "name": "Cheese",
+      "keywords": [
+        "\\b(cheddar|mozzarella|swiss|provolone|parmesan|colby|monterey|gouda|brie|feta|ricotta|gruyere|havarti|asiago|gorgonzola|blue cheese|goat cheese|manchego|halloumi|burrata)\\b",
+        "\\b(shredded|sliced|block|string) cheese\\b",
+        "\\bcheese\\b.*\\b(slices?|block|shredded|sticks?|wedge|crumbles?|crumbled|ball|log|spread|tray|round|cube|chunk|snack)\\b",
+        "\\bkraft singles\\b",
+        "\\bbabybel\\b",
+        "\\bcream cheese\\b",
+        "\\bcottage cheese\\b",
+        "\\bsour cream\\b",
+        "\\bphiladelphia\\b.*\\bcream\\b",
+        "\\bvelveeta\\b",
+        "\\b(montchevre|cabot|primo taglio|sargento|tillamook|kerrygold|boursin|laughing cow|president|dietz & watson|kaukauna|palmetto cheese)\\b"
+      ],
+      "exclude": [
+        "\\bcheese[- ]?(it|nip|crackers?)\\b",
+        "\\bmac(aroni)? and cheese\\b",
+        "\\bmac n'? cheese\\b",
+        "\\bcheese (puffs?|popcorn|chips?|curls?)\\b",
+        "\\bcheesecake\\b",
+        "\\bcheeseburger\\b",
+        "\\bcheese pizza\\b.*\\bfrozen\\b"
+      ]
+    },
+    {
+      "id": "butter",
+      "name": "Butter & Margarine",
+      "keywords": [
+        "\\bbutter\\b",
+        "\\bmargarine\\b",
+        "\\bland o'?\\s*lakes\\b",
+        "\\bcountry crock\\b",
+        "\\bsmart balance\\b.*\\bspread\\b",
+        "\\bi can'?t believe it'?s not butter\\b",
+        "\\bghee\\b"
+      ],
+      "exclude": [
+        "\\bpeanut butter\\b",
+        "\\balmond butter\\b",
+        "\\bcashew butter\\b",
+        "\\bsunflower butter\\b",
+        "\\bcookie butter\\b",
+        "\\bbutter (cookies|bar|cake|cracker|popcorn|toffee)\\b",
+        "\\bbutter (chicken|shrimp|lobster)\\b",
+        "\\bbutter (lettuce|head|leaf)\\b",
+        "\\bbutter\\s*(&|and)\\s*sugar\\b",
+        "\\bbutternut\\b",
+        "\\bbutter ?milk\\b",
+        "\\bapple butter\\b",
+        "\\bbody butter\\b"
+      ]
+    },
+    {
+      "id": "yogurt",
+      "name": "Yogurt",
+      "keywords": [
+        "\\byogurt\\b",
+        "\\bchobani\\b",
+        "\\boikos\\b",
+        "\\byoplait\\b",
+        "\\bgreek yogurt\\b",
+        "\\bdannon\\b.*\\byogurt\\b",
+        "\\bfage\\b"
+      ],
+      "exclude": [
+        "\\byogurt (covered|bar)\\b",
+        "\\bfrozen yogurt\\b"
+      ]
+    },
+    {
+      "id": "ice_cream",
+      "name": "Ice Cream & Frozen Desserts",
+      "keywords": [
+        "\\bice cream\\b",
+        "\\bgelato\\b",
+        "\\bsorbet\\b",
+        "\\bsherbet\\b",
+        "\\bfrozen yogurt\\b",
+        "\\bben\\s*(&|and)\\s*jerry'?s\\b",
+        "\\bhaagen[- ]?dazs\\b",
+        "\\bedy'?s\\b",
+        "\\bbreyers\\b",
+        "\\btalenti\\b",
+        "\\bfroyo\\b",
+        "\\b(klondike|drumstick|magnum) bars?\\b",
+        "\\bice cream (sandwich|bar|cone|cake)\\b",
+        "\\bpopsicle\\b",
+        "\\b(fudgesicle|creamsicle)\\b"
+      ],
+      "exclude": []
+    },
+    {
+      "id": "coffee",
+      "name": "Coffee & Tea",
+      "keywords": [
+        "\\bcoffee\\b",
+        "\\bk[- ]?cup\\b",
+        "\\bground coffee\\b",
+        "\\bcoffee beans?\\b",
+        "\\bespresso\\b",
+        "\\binstant coffee\\b",
+        "\\bfolgers?\\b",
+        "\\bmaxwell house\\b",
+        "\\bdunkin'?\\b.*\\bcoffee\\b",
+        "\\bstarbucks\\b.*\\b(coffee|ground|beans?|k[- ]?cup)\\b",
+        "\\bkeurig\\b",
+        "\\bnespresso\\b",
+        "\\btea bags?\\b",
+        "\\bgreen tea\\b",
+        "\\bblack tea\\b",
+        "\\bchai tea\\b",
+        "\\bherbal tea\\b",
+        "\\blipton\\b.*\\btea\\b",
+        "\\bbigelow\\b.*\\btea\\b",
+        "\\bcelestial\\b.*\\btea\\b",
+        "\\btazo\\b",
+        "\\btwinings\\b"
+      ],
+      "exclude": [
+        "\\bcoffee (creamer|mate|cake|table|maker|grinder|filter|mug|cup\\b(?!.*\\bk[- ]?cup))\\b",
+        "\\bcoffee[- ]flavored\\b.*\\bice cream\\b",
+        "\\biced tea\\b.*\\b(bottle|can|gallon)\\b",
+        "\\btea (kettle|pot|cup|spoon|towel)\\b"
+      ]
+    },
+    {
+      "id": "soda",
+      "name": "Soda & Soft Drinks",
+      "keywords": [
+        "\\b(coke|coca[- ]cola|pepsi|sprite|fanta|dr\\.? pepper|7[- ]?up|mountain dew|mtn dew)\\b",
+        "\\b(diet|zero|caffeine free)\\b.*\\b(coke|pepsi|soda|cola)\\b",
+        "\\bsoda\\b",
+        "\\bsoft drink\\b",
+        "\\b(root beer|cream soda|ginger ale|club soda|tonic water|seltzer)\\b",
+        "\\b(sparkling water|sparkling ice|la croix|bubly|polar)\\b",
+        "\\b(gatorade|powerade|propel)\\b",
+        "\\b(red bull|monster|rockstar|celsius|bang)\\b.*\\b(energy|drink|can)\\b",
+        "\\b12[- ]?pack\\b.*\\b(soda|cola|pop|cans?)\\b",
+        "\\b24[- ]?pack\\b.*\\b(soda|cola|pop|cans?)\\b",
+        "\\b2[- ]?liter\\b"
+      ],
+      "exclude": [
+        "\\bbaking soda\\b",
+        "\\b(soda|seltzer) (bread|stream)\\b"
+      ]
+    },
+    {
+      "id": "juice",
+      "name": "Juice",
+      "keywords": [
+        "\\bjuice\\b",
+        "\\bjuicy juice\\b",
+        "\\bocean spray\\b",
+        "\\bsimply (orange|lemonade|apple|grapefruit)\\b",
+        "\\btropicana\\b",
+        "\\bminute maid\\b",
+        "\\bv8\\b.*\\b(juice|veggie)\\b",
+        "\\bcapri sun\\b",
+        "\\bjuicebox\\b",
+        "\\blemonade\\b",
+        "\\bfruit punch\\b",
+        "\\bkool[- ]?aid\\b",
+        "\\bcountry time\\b",
+        "\\bhi[- ]?c\\b",
+        "\\bwelch'?s\\b.*\\b(juice|grape|sparkling)\\b",
+        "\\bnaked\\b.*\\b(juice|smoothie)\\b",
+        "\\bizze\\b"
+      ],
+      "exclude": [
+        "\\b(meat|steak|garlic|lemon) juice\\b",
+        "\\bjuice cleanse\\b",
+        "\\bjuicer\\b"
+      ]
+    },
+    {
+      "id": "bottled_water",
+      "name": "Bottled Water",
+      "keywords": [
+        "\\b(bottled|spring|purified|distilled|alkaline|electrolyte|mineral|artesian) water\\b",
+        "\\bwater\\b.*\\b(case|24[- ]?pack|32[- ]?pack|40[- ]?pack|gallon|liter|pack)\\b",
+        "\\b(poland spring|deer park|dasani|aquafina|nestle pure life|fiji|smartwater|essentia|evian|voss|perfect hydration|liquid death|core hydration)\\b",
+        "\\bwater bottle\\b.*\\b(pack|case)\\b"
+      ],
+      "exclude": [
+        "\\bwater (heater|filter|softener|bottle empty|chestnut)\\b",
+        "\\b(sparkling|seltzer|tonic|club|coconut|flavored) water\\b"
+      ]
+    },
+    {
+      "id": "bread",
+      "name": "Bread & Bakery",
+      "keywords": [
+        "\\bbread\\b",
+        "\\bsandwich bread\\b",
+        "\\b(white|wheat|whole wheat|multigrain|sourdough|rye|pumpernickel) bread\\b",
+        "\\bbagels?\\b",
+        "\\benglish muffins?\\b",
+        "\\bhamburger buns?\\b",
+        "\\bhot dog buns?\\b",
+        "\\b(brioche|hoagie|sub|sandwich|sandwich thin|kaiser) (buns?|rolls?)\\b",
+        "\\bdinner rolls?\\b",
+        "\\btortillas?\\b",
+        "\\bpita bread\\b",
+        "\\bnaan\\b",
+        "\\bwonder bread\\b",
+        "\\bsara lee\\b.*\\b(bread|bun|roll)\\b",
+        "\\bpepperidge farm\\b.*\\b(bread|bun|roll|cookie)\\b",
+        "\\bnature'?s own\\b",
+        "\\barnold\\b.*\\b(bread|bagel|sandwich)\\b",
+        "\\bthomas'?s?\\b.*\\b(bagel|english muffin)\\b",
+        "\\bcroissants?\\b",
+        "\\b(muffins?|donuts?|doughnuts?)\\b"
+      ],
+      "exclude": [
+        "\\bbread crumbs?\\b",
+        "\\bbreadcrumb\\b",
+        "\\bgarlic bread\\b.*\\bfrozen\\b",
+        "\\bbread (machine|maker|knife|board|basket|box)\\b",
+        "\\bpita chips?\\b",
+        "\\btortilla chips?\\b",
+        "\\bbagel chips?\\b",
+        "\\bcorn (bread|tortilla)\\b.*\\bmix\\b",
+        "\\b(bread|muffin|donut) (mix|kit)\\b"
+      ]
+    },
+    {
+      "id": "snacks",
+      "name": "Snacks",
+      "keywords": [
+        "\\b(potato|tortilla|corn|veggie|pita|bagel|kettle) chips?\\b",
+        "\\bchips?\\b.*\\b(bag|family size|party size)\\b",
+        "\\bpretzels?\\b",
+        "\\bpopcorn\\b",
+        "\\bdoritos\\b",
+        "\\bfritos\\b",
+        "\\bcheetos\\b",
+        "\\blay'?s\\b",
+        "\\bruffles\\b",
+        "\\bsun chips\\b",
+        "\\bpringles\\b",
+        "\\bgoldfish\\b",
+        "\\bcrackers?\\b",
+        "\\bcheez[- ]?its?\\b",
+        "\\btriscuit\\b",
+        "\\bwheat thins\\b",
+        "\\britz\\b.*\\bcracker\\b",
+        "\\bnut[- ]?thins?\\b",
+        "\\bpork rinds?\\b",
+        "\\btrail mix\\b",
+        "\\b(roasted|salted|mixed) nuts\\b",
+        "\\b(cashews?|peanuts?|almonds?|pistachios?)\\b.*\\b(can|bag|tub|jar)\\b",
+        "\\b(beef|turkey) jerky\\b",
+        "\\bslim jim\\b",
+        "\\bgranola bars?\\b",
+        "\\bnutri[- ]?grain\\b",
+        "\\bclif bar\\b",
+        "\\bkind bar\\b",
+        "\\bquaker chewy\\b",
+        "\\bfruit snacks?\\b",
+        "\\bfruit by the foot\\b",
+        "\\bgushers\\b",
+        "\\bcombos\\b.*\\bsnack\\b"
+      ],
+      "exclude": [
+        "\\bchip[- ]?ahoy\\b",
+        "\\bchocolate chip\\b",
+        "\\b(bagel|pita) chip\\b.*\\b(cream cheese|dip|hummus)\\b",
+        "\\bcracker barrel\\b",
+        "\\b(crackers? )?cheese\\b.*\\bplatter\\b",
+        "\\bsoda cracker\\b"
+      ]
+    },
+    {
+      "id": "cookies_candy",
+      "name": "Cookies & Candy",
+      "keywords": [
+        "\\bcookies?\\b",
+        "\\boreo\\b",
+        "\\bchips? ahoy\\b",
+        "\\bnutter butter\\b",
+        "\\bgirl scout\\b.*\\bcookie\\b",
+        "\\bnilla wafer\\b",
+        "\\bgraham crackers?\\b",
+        "\\bfig newton\\b",
+        "\\bcandy\\b",
+        "\\bchocolate bars?\\b",
+        "\\b(hershey|hersheys|kit kat|reese'?s|snickers|m&m|twix|milky way|3 musketeers|butterfinger|baby ruth|payday|almond joy|mounds|kinder|toblerone|lindt|ghirardelli|godiva|dove)\\b",
+        "\\bgummies?\\b",
+        "\\bgummy (bears?|worms?|candy)\\b",
+        "\\b(skittles|starburst|twizzlers?|airheads?|jolly ranchers?|lifesavers?|nerds)\\b",
+        "\\b(sour patch|swedish fish|sour straws)\\b",
+        "\\b(jelly beans?|jellybeans?)\\b",
+        "\\bgum\\b.*\\b(pack|stick|chew)\\b",
+        "\\b(trident|orbit|extra|5 gum|dentyne|big red|bubblicious|hubba bubba)\\b",
+        "\\bmints?\\b.*\\b(altoid|tic tac|breath|pack|tin)\\b",
+        "\\b(altoids|tic tac|mentos|certs)\\b",
+        "\\blollipop\\b",
+        "\\b(tootsie pop|dum[- ]?dum|chupa chups?|blow pop)\\b",
+        "\\bcaramel\\b.*\\b(bag|individually)\\b",
+        "\\b(chocolate chip|peanut butter|sugar|oatmeal raisin|snickerdoodle) cookies?\\b"
+      ],
+      "exclude": [
+        "\\bcookie (dough|sheet|jar|cutter|press|scoop)\\b",
+        "\\bcandy (corn).*\\b(decoration|ornament)\\b",
+        "\\bcookie mix\\b",
+        "\\bgum (ball|machine|line|wood)\\b",
+        "\\bdental gum\\b"
+      ]
+    },
+    {
+      "id": "laundry",
+      "name": "Laundry",
+      "keywords": [
+        "\\blaundry detergent\\b",
+        "\\bdetergent\\b.*\\b(pods?|liquid|powder|he)\\b",
+        "\\btide\\b",
+        "\\bgain\\b.*\\b(detergent|laundry)\\b",
+        "\\barm & hammer\\b.*\\b(laundry|detergent)\\b",
+        "\\bpersil\\b",
+        "\\ball (free clear|small mighty|laundry)\\b",
+        "\\bcheer\\b.*\\bdetergent\\b",
+        "\\bxtra\\b.*\\b(detergent|laundry)\\b",
+        "\\boxiclean\\b",
+        "\\bclorox\\b.*\\bbleach\\b",
+        "\\bbleach\\b",
+        "\\bfabric softener\\b",
+        "\\bdownsy?\\b",
+        "\\bbounce\\b.*\\b(dryer|sheet|fabric)\\b",
+        "\\bsnuggle\\b.*\\b(fabric|softener|dryer)\\b",
+        "\\bdryer sheets?\\b",
+        "\\blint roller\\b",
+        "\\bstain remover\\b",
+        "\\bshout\\b.*\\bstain\\b"
+      ],
+      "exclude": [
+        "\\bdetergent\\b.*\\bdish\\b",
+        "\\bdishwasher detergent\\b"
+      ]
+    },
+    {
+      "id": "chicken",
+      "name": "Chicken",
+      "keywords": [
+        "\\bchicken (breasts?|thighs?|wings?|drumsticks?|tenders?|legs?|cutlets?|nuggets?|fillets?|tenderloins?|strips?|patties?)\\b",
+        "\\bwhole chicken\\b",
+        "\\brotisserie chicken\\b",
+        "\\bground chicken\\b",
+        "\\bboneless\\b.*\\bchicken\\b",
+        "\\bskinless\\b.*\\bchicken\\b",
+        "\\bbreaded chicken\\b",
+        "\\bchicken\\b.*\\b(pack|family pack|per lb|/lb)\\b",
+        "\\bperdue\\b",
+        "\\btyson\\b.*\\bchicken\\b",
+        "\\bbell\\s*(&|and)\\s*evans\\b",
+        "\\b(yummy|just bare|king'?s hawaiian)\\b.*\\bchicken\\b"
+      ],
+      "exclude": [
+        "\\bchicken (broth|stock|noodle|soup|bouillon|seasoning|flavor|gravy|salt)\\b",
+        "\\bchicken (pot pie|nuggets frozen)\\b",
+        "\\bchicken (sandwich kit|alfredo|parmesan|caesar) meal\\b",
+        "\\bchicken (treats|food|chow)\\b"
+      ]
+    },
+    {
+      "id": "beef",
+      "name": "Beef",
+      "keywords": [
+        "\\bground beef\\b",
+        "\\bground chuck\\b",
+        "\\b(80/20|85/15|90/10|93/7|73/27)\\b",
+        "\\bbeef\\b.*\\b(steak|roast|brisket|short rib|tenderloin|loin|chuck|sirloin|ribeye|t[- ]?bone|porterhouse|flank|skirt|round|shank|shoulder)\\b",
+        "\\b(ribeye|t[- ]?bone|porterhouse|sirloin|flank|skirt|filet mignon|new york strip|chuck roast|tri[- ]?tip) steak\\b",
+        "\\b(ribeye|t[- ]?bone|porterhouse|sirloin|flank|skirt|new york strip|chuck|tri[- ]?tip)\\b.*\\b(per lb|/lb)\\b",
+        "\\bbeef (patties|burgers?)\\b",
+        "\\bhamburger meat\\b",
+        "\\bcorned beef\\b.*\\b(brisket|raw|fresh)\\b",
+        "\\bstew meat\\b",
+        "\\blondon broil\\b"
+      ],
+      "exclude": [
+        "\\bbeef (broth|stock|jerky|consomme|bouillon|gravy|stick|stroganoff)\\b",
+        "\\bbeef (ravioli|chili|stew) can\\b",
+        "\\bcorned beef hash\\b",
+        "\\bbeef (taco|burrito|enchilada) (kit|mix|seasoning)\\b"
+      ]
+    },
+    {
+      "id": "pork",
+      "name": "Pork",
+      "keywords": [
+        "\\bpork (chops?|loin|tenderloin|roast|shoulder|butt|ribs?|belly|sausage|cutlets?|fillets?|steaks?)\\b",
+        "\\b(baby back|spare|st\\.? louis) ribs?\\b",
+        "\\bground pork\\b",
+        "\\bham\\b.*\\b(roast|spiral|bone[- ]?in|boneless|honey|smithfield|fresh|whole)\\b",
+        "\\bham steaks?\\b",
+        "\\bham hocks?\\b",
+        "\\bcountry style\\b.*\\b(ribs?|pork)\\b",
+        "\\bpork\\b.*\\b(per lb|/lb)\\b",
+        "\\bsmithfield\\b",
+        "\\bcarando\\b"
+      ],
+      "exclude": [
+        "\\bpork (rinds?|fat|skin|broth|stock)\\b",
+        "\\bham (sandwich|lunchables|salad)\\b",
+        "\\bham\\b.*\\bdeli\\b",
+        "\\bhamburger\\b",
+        "\\bspareribs?\\b.*\\bcan\\b"
+      ]
+    },
+    {
+      "id": "seafood",
+      "name": "Seafood",
+      "keywords": [
+        "\\b(salmon|tuna|tilapia|cod|haddock|halibut|mahi[- ]?mahi|swordfish|trout|catfish|flounder|bass|snapper|grouper|mackerel|sardines?|herring|sole|whitefish|pollock)\\b.*\\b(fillet|steak|fresh|frozen|wild|farm|per lb|/lb|fish)\\b",
+        "\\b(salmon|tuna|tilapia|cod|haddock|halibut|trout|catfish|flounder|bass|snapper|grouper|mackerel|pollock) (fillets?|steaks?)\\b",
+        "\\b(fresh|frozen|wild|atlantic|pacific|alaskan)\\b.*\\b(salmon|tuna|cod|haddock|tilapia|trout|halibut|shrimp|scallops?|crab|lobster)\\b",
+        "\\bshrimp\\b",
+        "\\bprawn\\b",
+        "\\bscallops?\\b",
+        "\\bcrab (legs?|meat|cake|cluster)\\b",
+        "\\blobster (tail|claw|whole)\\b",
+        "\\bclams?\\b.*\\b(fresh|frozen|live|raw)\\b",
+        "\\boysters?\\b.*\\b(fresh|raw|on the half)\\b",
+        "\\bmussels?\\b",
+        "\\bfish\\b.*\\b(fillet|fresh|frozen|stick|finger)\\b",
+        "\\bcrab cake\\b",
+        "\\bsushi\\b.*\\b(grade|fresh|tray|platter)\\b",
+        "\\bgorton'?s\\b",
+        "\\bstarkist\\b",
+        "\\bbumble bee\\b.*\\b(tuna|salmon)\\b",
+        "\\bchicken of the sea\\b"
+      ],
+      "exclude": [
+        "\\b(tuna|salmon) (helper|noodle|salad kit)\\b",
+        "\\bfish (oil|sauce|seasoning|food|tank)\\b",
+        "\\b(clam|seafood) chowder\\b",
+        "\\bfishing\\b"
+      ]
+    },
+    {
+      "id": "deli_bacon",
+      "name": "Deli Meat & Bacon",
+      "keywords": [
+        "\\bbacon\\b",
+        "\\bsausages?\\b",
+        "\\bbreakfast sausage\\b",
+        "\\bhot dogs?\\b",
+        "\\bfranks?\\b.*\\b(beef|pork|ball park|nathan|oscar mayer)\\b",
+        "\\bdeli\\b.*\\b(meat|turkey|ham|roast beef|salami|bologna|pastrami)\\b",
+        "\\bsliced (turkey|ham|roast beef|chicken|salami|bologna|pastrami)\\b",
+        "\\b(turkey|chicken|ham|roast beef|salami|bologna|pastrami)\\b.*\\b(deli|slices|sliced|lunch meat|lunchmeat)\\b",
+        "\\blunch meat\\b",
+        "\\blunchmeat\\b",
+        "\\bcold cuts?\\b",
+        "\\b(boar'?s head|hillshire|oscar mayer|hormel|land o'?frost|carl buddig|sara lee|applegate|columbus)\\b",
+        "\\bkielbasa\\b",
+        "\\bbratwurst\\b",
+        "\\bchorizo\\b",
+        "\\bpepperoni\\b.*\\b(stick|slice|package)\\b",
+        "\\bsalami\\b",
+        "\\bprosciutto\\b",
+        "\\bspam\\b",
+        "\\bball park\\b",
+        "\\bjohnsonville\\b"
+      ],
+      "exclude": [
+        "\\bbacon (bits|grease|wrapped|flavor|salt)\\b",
+        "\\bsausage (gravy|seasoning|stuffing|patty mix)\\b",
+        "\\bturkey\\b.*\\b(whole|breast roast|frozen)\\b",
+        "\\bbreakfast sandwich\\b"
+      ]
+    },
+    {
+      "id": "produce_fresh",
+      "name": "Fresh Produce",
+      "keywords": [
+        "\\b(fresh|fuji|gala|granny smith|honeycrisp|red delicious|golden delicious|braeburn|pink lady|cosmic crisp|sweetango|jazz|ambrosia)\\b.*\\bapples?\\b",
+        "\\bapples?\\b.*\\b(bag|lb|each|fresh|fuji|gala|granny|honeycrisp)\\b",
+        "\\bbananas?\\b",
+        "\\b(navel|cara cara|blood) oranges?\\b",
+        "\\bmandarin oranges?\\b.*\\b(fresh|cuties|halos|bag)\\b",
+        "\\b(grapes|grapefruit|lemons?|limes?|oranges?|tangerines?|clementines?)\\b.*\\b(bag|lb|each|fresh)\\b",
+        "\\bstrawberries?\\b",
+        "\\bblueberries?\\b",
+        "\\braspberries?\\b",
+        "\\bblackberries?\\b",
+        "\\b(pineapples?|watermelons?|cantaloupes?|honeydews?|mangos?|mangoes|kiwis?|papayas?|pears?|peaches?|plums?|cherries|apricots?|nectarines?)\\b",
+        "\\b(avocados?|tomatoes?|cucumbers?|peppers?|onions?|lettuce|romaine|spinach|kale|cabbage|broccoli|cauliflower|carrots?|celery|radishes?|zucchini|squash|asparagus|brussels sprouts?|artichokes?|leeks?|eggplants?|mushrooms?)\\b.*\\b(fresh|bag|head|bunch|each|lb)\\b",
+        "\\b(fresh|whole) (broccoli|cauliflower|cabbage|spinach|kale)\\b",
+        "\\b(grape|cherry|roma|beefsteak|heirloom) tomatoes?\\b",
+        "\\b(red|yellow|orange|green|bell|sweet) peppers?\\b",
+        "\\b(red|yellow|sweet|vidalia|spanish|pearl) onions?\\b",
+        "\\b(russet|red|yukon|sweet|baby) potatoes?\\b",
+        "\\b(baby|spring) (carrots?|spinach|kale|lettuce)\\b",
+        "\\bsalad (kit|mix|bag)\\b",
+        "\\bspring mix\\b",
+        "\\barugula\\b",
+        "\\bcorn on the cob\\b",
+        "\\bsweet corn\\b.*\\b(ear|each|fresh|cob)\\b",
+        "\\bfresh herbs?\\b",
+        "\\bbasil\\b.*\\b(fresh|plant|bunch)\\b",
+        "\\bcilantro\\b",
+        "\\bparsley\\b.*\\b(fresh|bunch)\\b",
+        "\\bmint\\b.*\\b(fresh|bunch)\\b",
+        "\\bginger\\b.*\\b(fresh|root)\\b",
+        "\\bgarlic\\b.*\\b(fresh|bulb|head)\\b"
+      ],
+      "exclude": [
+        "\\bfrozen\\b",
+        "\\bcanned\\b",
+        "\\bjuice\\b",
+        "\\bdried\\b",
+        "\\bsauce\\b",
+        "\\bsalsa\\b",
+        "\\bgummy\\b",
+        "\\bcandy\\b",
+        "\\bflavored\\b.*\\b(water|tea|drink)\\b",
+        "\\b(apple|banana|berry|fruit) (chip|crisp|bar|snack|cereal|pop[- ]?tart)\\b",
+        "\\bbroccoli (florets )?frozen\\b",
+        "\\b(onion|garlic) (powder|salt)\\b",
+        "\\bgarlic\\b.*\\b(bread|toast|knot|sauce)\\b"
       ]
     }
   ]

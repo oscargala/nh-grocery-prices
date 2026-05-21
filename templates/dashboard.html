@@ -269,7 +269,8 @@
 
         .deals-table tr:last-child td { border-bottom: none; }
         .deals-table tr.cheapest td { background: var(--green-light); }
-        .deals-table tr.filtered-out { display: none; }
+        .deals-table tr.filtered-out,
+        .category-card:not(.expanded) .deals-table tr.collapsed { display: none; }
 
         .price { font-weight: 700; white-space: nowrap; }
 
@@ -328,6 +329,43 @@
         }
 
         .btn-show-more:hover { background: var(--bg); }
+
+        .expand-row {
+            padding: 0.5rem 0.75rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+
+        .category-jump-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            padding: 0.75rem 0;
+            margin-bottom: 1rem;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .category-jump-nav a {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-decoration: none;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--card-bg);
+        }
+
+        .category-jump-nav a:hover { background: var(--bg); }
+        .category-jump-nav a .nav-count {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-left: 0.25rem;
+        }
+
+        /* Smooth scroll when jumping to category anchors */
+        html { scroll-behavior: smooth; }
+        .category-card { scroll-margin-top: 1rem; }
 
         footer {
             text-align: center;
@@ -399,9 +437,15 @@
         <div class="refresh-status" id="refreshStatus"></div>
     </div>
 
+    <nav class="category-jump-nav" aria-label="Jump to category">
+        {% for cat in categories %}{% if cat.deal_count > 0 %}
+        <a href="#cat-{{ cat.id }}">{{ cat.name }}<span class="nav-count">{{ cat.deal_count }}</span></a>
+        {% endif %}{% endfor %}
+    </nav>
+
     <div class="category-grid" id="categoryGrid">
         {% for cat in categories %}
-        <div class="category-card" data-cat-id="{{ cat.id }}">
+        <div class="category-card" id="cat-{{ cat.id }}" data-cat-id="{{ cat.id }}">
             <div class="category-header">
                 <h2>{{ cat.name }}</h2>
                 <span class="deal-count" data-original-count="{{ cat.deal_count }}">{{ cat.deal_count }} deal{{ 's' if cat.deal_count != 1 }}</span>
@@ -418,7 +462,8 @@
                     </thead>
                     <tbody>
                         {% for deal in cat.deals %}
-                        <tr data-store="{{ deal.store }}"
+                        <tr class="{% if loop.index > 10 %}collapsed{% endif %}"
+                            data-store="{{ deal.store }}"
                             data-type="{{ deal.price_type }}"
                             data-name="{{ deal.name|lower }}"
                             data-brand="{{ (deal.brand or '')|lower }}"
@@ -446,6 +491,11 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                {% if cat.deals|length > 10 %}
+                <div class="expand-row">
+                    <button class="btn-show-more" onclick="toggleCategory(this)" data-total="{{ cat.deals|length }}">Show all {{ cat.deals|length }} deals</button>
+                </div>
+                {% endif %}
                 {% else %}
                 <div class="no-deals">No deals found this week</div>
                 {% endif %}
@@ -464,6 +514,16 @@
     <script>
         function toggleChip(el) {
             el.classList.toggle('active');
+        }
+
+        function toggleCategory(btn) {
+            var card = btn.closest('.category-card');
+            // user-expanded sticks across search-clear; expanded reflects current state
+            var expanded = card.classList.toggle('user-expanded');
+            card.classList.toggle('expanded', expanded);
+            btn.textContent = expanded
+                ? 'Show top 10'
+                : 'Show all ' + btn.getAttribute('data-total') + ' deals';
         }
 
         function selectAllStores(select) {
@@ -514,8 +574,18 @@
             var activeTypes = getActiveTypes();
             var totalVisible = 0;
             var totalAll = 0;
+            var hasSearch = query.length > 0;
 
             document.querySelectorAll('.category-card').forEach(function(card) {
+                // Auto-expand all categories while a search is active so collapsed
+                // rows can show matches; restore default collapse when search clears
+                // (unless the user explicitly expanded via the Show all button).
+                if (hasSearch || card.classList.contains('user-expanded')) {
+                    card.classList.add('expanded');
+                } else {
+                    card.classList.remove('expanded');
+                }
+
                 var rows = card.querySelectorAll('tbody tr');
                 var visibleInCard = 0;
                 var cheapestFound = false;
