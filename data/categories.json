@@ -765,6 +765,120 @@
       ]
     },
     {
+      "id": "pasta_sauce",
+      "name": "Pasta & Pizza Sauce",
+      "keywords": [
+        "\\bpasta sauce\\b",
+        "\\bspaghetti sauce\\b",
+        "\\bmarinara\\b",
+        "\\balfredo sauce\\b",
+        "\\bvodka sauce\\b",
+        "\\bpesto\\b",
+        "\\bpizza sauce\\b",
+        "\\b(rao'?s|prego|ragu|barilla|classico|bertolli|newman'?s own|francesco rinaldi|hunt'?s)\\b.*\\b(sauce|marinara|pasta|pizza)\\b"
+      ],
+      "exclude": [
+        "\\btomato (paste|sauce can|sauce, 8 oz|sauce 8oz)\\b"
+      ]
+    },
+    {
+      "id": "condiments",
+      "name": "Condiments & Dressings",
+      "keywords": [
+        "\\bketchup\\b",
+        "\\bmustard\\b",
+        "\\bmayonnaise\\b",
+        "\\bmayo\\b",
+        "\\bbbq sauce\\b",
+        "\\bbarbecue sauce\\b",
+        "\\bhot sauce\\b",
+        "\\bsriracha\\b",
+        "\\bsoy sauce\\b",
+        "\\bworcestershire\\b",
+        "\\bsalad dressing\\b",
+        "\\b(ranch|caesar|italian|balsamic|french|thousand island|honey mustard|raspberry|vinaigrette) dressing\\b",
+        "\\b(heinz|french'?s|hellmann'?s|miracle whip|grey poupon|gulden'?s|sweet baby ray'?s|stubb'?s|kraft|kraft singles|kc masterpiece|tabasco|frank'?s red ?hot|cholula|texas pete)\\b",
+        "\\brelish\\b",
+        "\\b(dill|sweet|kosher) pickles?\\b",
+        "\\bsalsa\\b",
+        "\\bguacamole\\b",
+        "\\b(hidden valley|ken'?s|wishbone|newman'?s own)\\b.*\\bdressing\\b",
+        "\\bhummus\\b",
+        "\\bteriyaki sauce\\b",
+        "\\b(steak|cocktail|tartar|chimichurri) sauce\\b",
+        "\\bhoney\\b.*\\b(jar|bear|squeeze|local)\\b"
+      ],
+      "exclude": [
+        "\\bsauce pan\\b",
+        "\\bpasta sauce\\b",
+        "\\bpizza sauce\\b",
+        "\\b(alfredo|marinara|vodka|pesto) sauce\\b",
+        "\\bapplesauce\\b",
+        "\\bice cream\\b.*\\bsauce\\b"
+      ]
+    },
+    {
+      "id": "peanut_butter_jelly",
+      "name": "Peanut Butter & Jam",
+      "keywords": [
+        "\\bpeanut butter\\b",
+        "\\b(almond|cashew|sunflower|hazelnut) butter\\b",
+        "\\bnut butter\\b",
+        "\\bjif\\b",
+        "\\bskippy\\b",
+        "\\bsmucker'?s\\b",
+        "\\b(grape|strawberry|raspberry|blueberry|blackberry|apricot|fig) (jam|jelly|preserves?|spread)\\b",
+        "\\b(jam|jelly|preserves|marmalade)\\b.*\\b(jar|squeeze|bottle)\\b",
+        "\\bnutella\\b",
+        "\\bjustin'?s\\b.*\\b(butter|spread)\\b"
+      ],
+      "exclude": [
+        "\\bpeanut butter (cup|bar|cookie|candy|chocolate|m&m|m and m|filled|crackers?|sandwich)\\b",
+        "\\bcookie butter\\b",
+        "\\bbody butter\\b",
+        "\\bnut butter bar\\b",
+        "\\bcup\\b.*\\bpeanut butter\\b"
+      ]
+    },
+    {
+      "id": "baking",
+      "name": "Baking Essentials",
+      "keywords": [
+        "\\b(all[- ]?purpose|bread|cake|pastry|whole wheat|self[- ]?rising|gluten[- ]?free) flour\\b",
+        "\\bflour\\b.*\\b(bag|lb|5 lb|10 lb)\\b",
+        "\\b(granulated|powdered|brown|confectioner|raw|cane|coconut|turbinado) sugar\\b",
+        "\\bsugar\\b.*\\b(bag|lb|5 lb|10 lb)\\b",
+        "\\bbaking (soda|powder|chips?|cocoa|chocolate)\\b",
+        "\\b(corn|olive|vegetable|canola|peanut|avocado|coconut|sesame|sunflower|grapeseed) oil\\b",
+        "\\bcrisco\\b",
+        "\\bshortening\\b",
+        "\\bcooking spray\\b",
+        "\\bpam\\b.*\\bspray\\b",
+        "\\bchocolate chips?\\b",
+        "\\b(hershey|nestle toll house|ghirardelli)\\b.*\\b(chips?|baking)\\b",
+        "\\bvanilla extract\\b",
+        "\\b(almond|lemon|maple|peppermint) extract\\b",
+        "\\b(cake|brownie|cookie|muffin|pancake|waffle|bread|pie crust) mix\\b",
+        "\\b(betty crocker|duncan hines|pillsbury|king arthur)\\b.*\\b(mix|flour|frosting|baking)\\b",
+        "\\bfrosting\\b",
+        "\\bsprinkles?\\b",
+        "\\b(corn|tapioca|potato) starch\\b",
+        "\\bmolasses\\b",
+        "\\b(corn|maple|simple) syrup\\b",
+        "\\b(yeast|active dry yeast|rapid rise)\\b.*\\b(packet|jar|baking)\\b",
+        "\\bevaporated milk\\b",
+        "\\bsweetened condensed milk\\b",
+        "\\bcondensed milk\\b"
+      ],
+      "exclude": [
+        "\\bflour (sack|towel|tortilla)\\b",
+        "\\bsugar (cone|free)\\b",
+        "\\b(maple|simple) syrup\\b.*\\b(pancake|waffle) (mix|kit)\\b",
+        "\\bsugar daddy\\b",
+        "\\bbrown sugar\\b.*\\b(oatmeal|cinnamon)\\b"
+      ]
+    },
+    {
       "id": "produce_fresh",
       "name": "Fresh Produce",
       "keywords": [
