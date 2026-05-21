@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import csv
-import json
 import logging
+import os
 import sys
 from dataclasses import asdict
 from datetime import datetime
@@ -16,10 +15,19 @@ from pathlib import Path
 # Allow imports from project root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Load .env if present so FIRECRAWL_API_KEY is available without exporting first
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+if _ENV_PATH.exists():
+    for _line in _ENV_PATH.read_text().splitlines():
+        _line = _line.strip()
+        if not _line or _line.startswith("#") or "=" not in _line:
+            continue
+        _k, _v = _line.split("=", 1)
+        os.environ.setdefault(_k.strip(), _v.strip())
+
 from src.compare import best_prices_by_category, category_summary
-from src.models import FlyerProduct
-from src.normalize import load_categories, load_stores
-from src.scrapers.aldi import collect_all as aldi_collect_all
+from src.normalize import load_categories
+from src.scrapers.firecrawl_store import build_scrapers as build_firecrawl_scrapers
 from src.scrapers.flipp import FlippScraper
 
 logger = logging.getLogger(__name__)
@@ -27,112 +35,31 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
 
 
-async def _run_camoufox_scraper(
-    scraper_name: str,
-    scraper_cls_path: str,
-    categories,
-    categories_to_scrape: list[str] | None = None,
-    staleness_days: int = 7,
-) -> list | None:
-    """Try a Camoufox-based stealth scraper. Returns products or None on failure."""
-    try:
-        import importlib
-        module_path, cls_name = scraper_cls_path.rsplit(".", 1)
-        module = importlib.import_module(module_path)
-        scraper_cls = getattr(module, cls_name)
-    except (ImportError, AttributeError):
-        logger.info("%s: camoufox not available, skipping", scraper_name)
-        return None
-
-    try:
-        scraper = scraper_cls(
-            categories=categories,
-            categories_to_scrape=categories_to_scrape,
-            staleness_days=staleness_days,
-        )
-        products = await scraper.collect_all()
-        logger.info("%s: %d products", scraper_name, len(products))
-        return products
-    except Exception:
-        logger.exception("%s scraper failed", scraper_name)
-        return None
-
-
-async def _run_playwright_scrapers(
+def _run_firecrawl_scrapers(
     categories,
     categories_to_scrape: list[str] | None = None,
     staleness_days: int = 7,
 ) -> list:
-    """Run Walmart scrapers in priority order, then remaining Playwright scrapers.
+    """Run Firecrawl-backed scrapers (Aldi + Walmart + Sam's Club).
 
-    Priority for Walmart:
-    1. Stealth scraper (Camoufox + Xvfb) — best anti-bot bypass
-    2. GraphQL API replay — fast but tokens expire quickly
-    3. Standard Playwright — fallback, often blocked
+    Replaces the previous Camoufox/Playwright stack, which broke after Aldi's
+    Instacart migration and Walmart's PerimeterX rollout.
     """
-    from src.scrapers.playwright import PlaywrightManager, SCRAPERS
-    from src.scrapers.walmart_api import WalmartAPIScraper
-
     all_products = []
-    walmart_handled = False
-
-    # 1. Camoufox stealth scrapers (Walmart + Sam's Club)
-    stealth_products = await _run_camoufox_scraper(
-        "WalmartStealth", "src.scrapers.walmart_stealth.WalmartStealthScraper",
-        categories, categories_to_scrape, staleness_days,
-    )
-    if stealth_products is not None:
-        all_products.extend(stealth_products)
-        walmart_handled = True
-
-    sams_products = await _run_camoufox_scraper(
-        "SamsClub", "src.scrapers.samsclub_stealth.SamsClubStealthScraper",
-        categories, categories_to_scrape, staleness_days,
-    )
-    if sams_products is not None:
-        all_products.extend(sams_products)
-
-    try:
-        async with PlaywrightManager() as manager:
-            # 2. Try GraphQL API replay if stealth didn't handle Walmart
-            if not walmart_handled:
-                try:
-                    api_scraper = WalmartAPIScraper(
-                        manager=manager,
-                        categories=categories,
-                        categories_to_scrape=categories_to_scrape,
-                        staleness_days=staleness_days,
-                    )
-                    products = await api_scraper.collect_all()
-                    all_products.extend(products)
-                    walmart_handled = True
-                    logger.info("WalmartAPI: %d products", len(products))
-                except Exception:
-                    logger.exception("WalmartAPI scraper failed, will try Playwright fallback")
-
-            # 3. Run remaining Playwright scrapers (skip Walmart if already handled)
-            for scraper_cls in SCRAPERS:
-                if walmart_handled and scraper_cls.store_id == "walmart":
-                    continue
-                scraper = scraper_cls(
-                    manager=manager,
-                    categories=categories,
-                    categories_to_scrape=categories_to_scrape,
-                    staleness_days=staleness_days,
-                )
-                try:
-                    products = await scraper.collect_all()
-                    all_products.extend(products)
-                    logger.info(
-                        "Playwright %s: %d products",
-                        scraper.store_name,
-                        len(products),
-                    )
-                except Exception:
-                    logger.exception("Playwright scraper failed: %s", scraper.store_name)
-    except Exception:
-        logger.exception("Playwright browser failed to start — skipping headless scrapers")
-
+    for scraper in build_firecrawl_scrapers(
+        categories=categories,
+        categories_to_scrape=categories_to_scrape,
+        staleness_days=staleness_days,
+    ):
+        try:
+            products = scraper.collect_all()
+            all_products.extend(products)
+            logger.info(
+                "Firecrawl %s: %d products returned to pipeline",
+                scraper.store_name, len(products),
+            )
+        except Exception:
+            logger.exception("Firecrawl %s: failed", scraper.store_name)
     return all_products
 
 
@@ -171,17 +98,15 @@ def run_pipeline(
     all_products = scraper.collect_all()
     logger.info("Flipp: %d products", len(all_products))
 
-    # Aldi catalog data (everyday prices)
-    aldi_products = aldi_collect_all()
-    all_products.extend(aldi_products)
-    logger.info("Aldi catalog: %d products, total: %d", len(aldi_products), len(all_products))
-
-    # Playwright scrapers (everyday prices from stores behind anti-bot protection)
-    playwright_products = asyncio.run(
-        _run_playwright_scrapers(categories, categories_to_scrape, staleness_days)
+    # Firecrawl-backed catalog scrapers (Aldi, Walmart, Sam's Club — everyday prices)
+    firecrawl_products = _run_firecrawl_scrapers(
+        categories, categories_to_scrape, staleness_days
     )
-    all_products.extend(playwright_products)
-    logger.info("Playwright: %d products, total: %d", len(playwright_products), len(all_products))
+    all_products.extend(firecrawl_products)
+    logger.info(
+        "Firecrawl: %d products, pipeline total: %d",
+        len(firecrawl_products), len(all_products),
+    )
 
     categorized = [p for p in all_products if p.category]
 

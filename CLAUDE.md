@@ -57,25 +57,19 @@ These are the categories identified from the original community request:
 - **Hannaford** — major NH chain, 189 stores in Northeast
 - **BJ's Wholesale** — bulk/warehouse club
 
-### Tier 2 — Direct catalog scraping (everyday/baseline prices)
-- **Aldi** (aldi.us) — CONFIRMED: product catalog pages serve structured price data in plain HTML. No JS rendering needed. Clean category URLs. This is the most reliable free data source.
-  - Example: `https://www.aldi.us/products/pantry-essentials/canned-foods/k/102`
-  - Data available: product name, brand, size/weight, price
-  - Paginated (page param in URL)
-  - Relevant category URLs:
-    - Canned Foods: `/products/pantry-essentials/canned-foods/k/102`
-    - Soups & Broth: `/products/pantry-essentials/soups-broth/k/105`
-    - Pasta, Rice & Grains: `/products/pantry-essentials/pasta-rice-grains/k/108`
-    - Spices: `/products/pantry-essentials/spices/k/106`
-    - Frozen Vegetables: `/products/frozen-foods/frozen-vegetables/k/163`
-    - Frozen Meals & Sides: `/products/frozen-foods/frozen-meals-sides/k/137`
-    - Paper & Plastic Products: `/products/household-essentials/paper-plastic-products/k/164`
-    - Cereal & Oatmeal: `/products/breakfast-cereals/cereal-oatmeal/k/162`
-    - Diapers, Wipes & Wash: `/products/baby-items/diapers-wipes-wash/k/53`
+### Tier 2 — Catalog scraping via Firecrawl (everyday/baseline prices)
+Aldi migrated `aldi.us` to an Instacart-powered SPA (sometime between Mar–May 2026); plain-HTML scraping no longer returns products. Walmart's PerimeterX/Akamai stack made the Camoufox stealth scraper unreliable (captcha rate ~92%). Sam's Club is the same boat as Walmart.
 
-### Tier 3 — Paid APIs (future, only if tool gains traction)
-- **SerpAPI** ($75/mo for 5,000 searches) or **SearchAPI** ($40/mo) for Walmart product data
-- Only needed if free scraping paths prove insufficient
+All three now go through **Firecrawl** (`https://api.firecrawl.dev/v1/scrape`) with AI JSON-schema extraction. The pipeline reads `FIRECRAWL_API_KEY` from `.env`. URL configs live in `src/scrapers/firecrawl_store.py`:
+- **Aldi** — 9 category pages under `/products/...`; Firecrawl renders the Instacart SPA.
+- **Walmart** — search URLs `/search?q=...&store_id=2055` (Concord NH).
+- **Sam's Club** — search URLs `/s/...?clubId=6604` (Concord NH).
+
+Free tier is 10 RPM; the scraper paces ~6.5s between requests. ~32 calls per full run, ~130/month at weekly cadence — well under the 500-credit free limit.
+
+### Tier 3 — Self-hosted Firecrawl or paid residential proxies (future)
+- Cloud Firecrawl's residential proxies are the only thing currently bypassing Walmart's PerimeterX reliably. Self-hosted Firecrawl works for Aldi (JS rendering) but not for Walmart/Sam's anti-bot.
+- If we outgrow the free tier, options: pay for Firecrawl Cloud, OR self-host Firecrawl + BYO residential proxy service.
 
 ## Architecture
 
@@ -84,18 +78,18 @@ These are the categories identified from the original community request:
 ```
 ┌─────────────────────────────────────────────────────┐
 │                   Data Sources                       │
-├──────────────┬──────────────┬───────────────────────┤
-│  Flipp API   │  Aldi.us     │  Future: Paid APIs    │
-│  (flyer/sale │  (everyday   │  (Walmart, etc.)      │
-│   prices)    │   catalog)   │                       │
-└──────┬───────┴──────┬───────┴───────────┬───────────┘
-       │              │                   │
-       ▼              ▼                   ▼
+├──────────────┬──────────────────────────────────────┤
+│  Flipp API   │  Firecrawl (renders JS + anti-bot)   │
+│  (sale       │  → Aldi, Walmart, Sam's Club         │
+│   flyers)    │     (everyday prices)                │
+└──────┬───────┴──────────────────┬───────────────────┘
+       │                          │
+       ▼                          ▼
 ┌─────────────────────────────────────────────────────┐
 │              Scrapers / Collectors                    │
-│  - flipp_scraper.py (adapted from flippscrape)      │
-│  - aldi_scraper.py (HTTP + HTML parse)              │
-│  - future: walmart_scraper.py                       │
+│  - src/scrapers/flipp.py   (Flipp HTTP)             │
+│  - src/scrapers/firecrawl_store.py                  │
+│    (Aldi + Walmart + Sam's via Firecrawl extract)   │
 └──────────────────────┬──────────────────────────────┘
                        │
                        ▼
