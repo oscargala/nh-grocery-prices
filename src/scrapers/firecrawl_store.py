@@ -75,21 +75,28 @@ class FirecrawlStoreScraper:
     """Scrapes a store's category pages via Firecrawl with JSON extraction.
 
     Each instance is configured with a `urls` dict mapping our internal
-    category IDs to the store URL that serves them. Multiple category IDs
-    may share a URL (e.g. Aldi's canned-foods page covers both canned_vegetables
-    and canned_soups); we dedupe and bin products by `categorize_item()`.
+    category IDs to one OR MORE store URLs. Multiple URLs per category support
+    static pagination (Walmart/Sam's pages 1-3). An optional
+    `follow_links_pattern` regex enables a second scrape pass for any link
+    discovered in already-scraped pages — used for Aldi sub-shelf collections.
+
+    Category IDs may share a URL (e.g. Aldi canned-foods serves both
+    canned_vegetables and canned_soups); we dedupe and bin products by
+    `categorize_item()`.
     """
 
     def __init__(
         self,
         store_id: str,
         store_name: str,
-        urls: dict[str, str],
+        urls: dict[str, list[str]],
         categories: list[CategoryDef],
         categories_to_scrape: list[str] | None = None,
         staleness_days: int = DEFAULT_STALENESS_DAYS,
         api_key: str | None = None,
         min_delay: float = 6.5,
+        follow_links_pattern: re.Pattern | None = None,
+        follow_links_cap: int = 25,
     ) -> None:
         self.store_id = store_id
         self.store_name = store_name
@@ -99,6 +106,8 @@ class FirecrawlStoreScraper:
         self.staleness_days = staleness_days
         self.api_key = api_key or os.environ.get("FIRECRAWL_API_KEY")
         self.min_delay = min_delay
+        self.follow_links_pattern = follow_links_pattern
+        self.follow_links_cap = follow_links_cap
 
     def collect_all(self) -> list[FlyerProduct]:
         if not self.api_key:
@@ -109,35 +118,100 @@ class FirecrawlStoreScraper:
         if not stale_cats:
             return self._load_cache()
 
-        # Group stale categories by URL — Aldi has multi-category pages
+        # Map URL → list of categories it serves. A URL may serve multiple
+        # categories (Aldi pages) and a category may be served by multiple URLs
+        # (Walmart pagination). After this loop, the same URL appears once even
+        # if multiple stale cats point to it.
         url_to_cats: dict[str, list[str]] = {}
         for cat in stale_cats:
-            url = self.urls[cat]
-            url_to_cats.setdefault(url, []).append(cat)
+            for url in self.urls[cat]:
+                url_to_cats.setdefault(url, []).append(cat)
 
         new_products: list[FlyerProduct] = []
-        successful: list[str] = []  # only categories whose URL actually returned
+        successful_cats: set[str] = set()
+        scraped_urls: set[str] = set()
+        discovered_urls: set[str] = set()
+
+        # Phase 1: scrape configured URLs (pagination included)
         for url, cats in url_to_cats.items():
+            scraped_urls.add(url)
             try:
-                page_products = self._scrape_url(url, cats)
+                page_products, links = self._scrape_url(url, cats)
                 new_products.extend(page_products)
-                successful.extend(cats)
+                successful_cats.update(cats)
                 logger.info(
-                    "Firecrawl %s: %d products from %s (categories: %s)",
+                    "Firecrawl %s: %d products from %s (cats: %s)",
                     self.store_name, len(page_products), url, ", ".join(cats),
                 )
+                if self.follow_links_pattern is not None:
+                    for link in links:
+                        if (
+                            link not in scraped_urls
+                            and self.follow_links_pattern.search(link)
+                        ):
+                            discovered_urls.add(link)
             except Exception:
-                # Transient failure: keep the existing cache for these cats
                 logger.exception("Firecrawl %s: failed %s", self.store_name, url)
             time.sleep(self.min_delay)
 
-        self._save_cache(new_products, refreshed_cats=successful)
+        # Phase 2: scrape any links discovered during Phase 1, capped
+        if discovered_urls:
+            to_follow = sorted(discovered_urls)[: self.follow_links_cap]
+            logger.info(
+                "Firecrawl %s: following %d discovered link(s) (of %d) — first 3: %s",
+                self.store_name, len(to_follow), len(discovered_urls), to_follow[:3],
+            )
+            for sub_url in to_follow:
+                if sub_url in scraped_urls:
+                    continue
+                scraped_urls.add(sub_url)
+                try:
+                    # No category hint — let categorize_item bin products
+                    page_products, _ = self._scrape_url(sub_url, [])
+                    new_products.extend(page_products)
+                    logger.info(
+                        "Firecrawl %s: %d products from sub-shelf %s",
+                        self.store_name, len(page_products), sub_url,
+                    )
+                except Exception:
+                    logger.exception("Firecrawl %s: failed sub-shelf %s", self.store_name, sub_url)
+                time.sleep(self.min_delay)
+
+        # Dedupe by (name, price) across all URLs/pages
+        deduped = self._dedupe(new_products)
+        if len(deduped) < len(new_products):
+            logger.info(
+                "Firecrawl %s: deduped %d → %d products",
+                self.store_name, len(new_products), len(deduped),
+            )
+
+        self._save_cache(deduped, refreshed_cats=sorted(successful_cats))
         return self._load_cache()
 
-    def _scrape_url(self, url: str, category_hints: list[str]) -> list[FlyerProduct]:
+    @staticmethod
+    def _dedupe(products: list[FlyerProduct]) -> list[FlyerProduct]:
+        seen: set[tuple[str, float]] = set()
+        out: list[FlyerProduct] = []
+        for p in products:
+            key = (p.name.lower().strip(), round(p.price, 2))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(p)
+        return out
+
+    def _scrape_url(
+        self, url: str, category_hints: list[str]
+    ) -> tuple[list[FlyerProduct], list[str]]:
+        """Returns (products, links). Links list is populated only when
+        follow_links_pattern is set, to keep payloads small otherwise.
+        """
+        formats: list = ["json"]
+        if self.follow_links_pattern is not None:
+            formats.append("links")
         payload = {
             "url": url,
-            "formats": ["json"],
+            "formats": formats,
             "jsonOptions": {"schema": PRODUCT_SCHEMA},
             "onlyMainContent": True,
         }
@@ -153,7 +227,7 @@ class FirecrawlStoreScraper:
         )
         if resp.status_code == 429:
             logger.warning("Firecrawl %s: rate limited on %s", self.store_name, url)
-            return []
+            return [], []
         resp.raise_for_status()
         body = resp.json()
         if not body.get("success"):
@@ -161,10 +235,14 @@ class FirecrawlStoreScraper:
                 "Firecrawl %s: unsuccessful response: %s",
                 self.store_name, body.get("error") or body.get("warning"),
             )
-            return []
+            return [], []
 
-        extracted = body.get("data", {}).get("json") or {}
+        data = body.get("data", {})
+        extracted = data.get("json") or {}
         raw_products = extracted.get("products", []) if isinstance(extracted, dict) else []
+        links = data.get("links") or []
+        if not isinstance(links, list):
+            links = []
 
         results: list[FlyerProduct] = []
         seen_names: set[str] = set()
@@ -214,7 +292,7 @@ class FirecrawlStoreScraper:
                     unit_price=unit_price,
                 )
             )
-        return results
+        return results, links
 
     # --- Per-category cache (same on-disk format as walmart_stealth.py) ---
 
@@ -278,6 +356,7 @@ class FirecrawlStoreScraper:
     def _load_cache(self) -> list[FlyerProduct]:
         data = self._load_cache_data()
         cats = data.get("categories", {})
+        known_cat_ids = {c.id for c in self.categories}
         products: list[FlyerProduct] = []
         for cat_data in cats.values():
             for p in cat_data.get("products", []):
@@ -286,13 +365,17 @@ class FirecrawlStoreScraper:
                 except Exception:
                     continue
                 # Re-categorize against the current categories.json so a category
-                # schema change takes effect without re-scraping. Drop products
-                # whose names no longer match any current category.
+                # schema change takes effect without re-scraping. Fall back to
+                # the saved category if regex doesn't match but it's still a
+                # known category (covers products saved via the category-hint
+                # fallback in _scrape_url).
                 new_cat = categorize_item(product.name, self.categories)
                 if new_cat is None and product.brand:
                     new_cat = categorize_item(
                         f"{product.brand} {product.name}", self.categories
                     )
+                if new_cat is None and product.category in known_cat_ids:
+                    new_cat = product.category
                 if new_cat is None:
                     continue
                 product.category = new_cat
@@ -339,7 +422,10 @@ class FirecrawlStoreScraper:
 
 # --- Per-store configs --------------------------------------------------------
 
-ALDI_URLS: dict[str, str] = {
+# Aldi: one parent category URL per cat. follow_links_pattern (set on the
+# scraper itself) discovers and scrapes /collections/rc-* sub-shelf URLs at
+# runtime, since Aldi's parent pages only render a carousel preview.
+_ALDI_PARENT_URLS: dict[str, str] = {
     "canned_vegetables": "https://www.aldi.us/products/pantry-essentials/canned-foods/k/102",
     "canned_soups": "https://www.aldi.us/products/pantry-essentials/soups-broth/k/105",
     "pasta": "https://www.aldi.us/products/pantry-essentials/pasta-rice-grains/k/108",
@@ -353,8 +439,15 @@ ALDI_URLS: dict[str, str] = {
     "paper_towels": "https://www.aldi.us/products/household-essentials/paper-plastic-products/k/164",
     "diapers": "https://www.aldi.us/products/baby-items/diapers-wipes-wash/k/53",
 }
+ALDI_URLS: dict[str, list[str]] = {cat: [url] for cat, url in _ALDI_PARENT_URLS.items()}
 
-# Walmart & Sam's Club use search URLs. Concord NH = store 2055 (Walmart), 6604 (Sam's)
+# Aldi sub-shelf collection URLs look like:
+#   https://www.aldi.us/store/aldi/collections/rc-canned-tomato?sisid=51459
+# Discover them dynamically from each parent page.
+ALDI_FOLLOW_PATTERN = re.compile(r"/store/aldi/collections/rc-[a-z0-9-]+")
+
+# Walmart & Sam's Club search URLs (Concord NH = store 2055 / clubId 6604).
+# Scrape pages 1-3 per category to pull more than the first page of results.
 _WALMART_QUERIES: dict[str, str] = {
     "canned_vegetables": "canned+vegetables",
     "canned_soups": "canned+soup+broth",
@@ -369,14 +462,23 @@ _WALMART_QUERIES: dict[str, str] = {
     "paper_towels": "paper+towels",
     "diapers": "diapers+baby+wipes",
 }
+PAGES_PER_QUERY = 3
 
-WALMART_URLS: dict[str, str] = {
-    cat: f"https://www.walmart.com/search?q={q}&store_id=2055"
+WALMART_URLS: dict[str, list[str]] = {
+    cat: [
+        f"https://www.walmart.com/search?q={q}&store_id=2055"
+        + (f"&page={p}" if p > 1 else "")
+        for p in range(1, PAGES_PER_QUERY + 1)
+    ]
     for cat, q in _WALMART_QUERIES.items()
 }
 
-SAMS_URLS: dict[str, str] = {
-    cat: f"https://www.samsclub.com/s/{q.replace('+', '%20')}?clubId=6604"
+SAMS_URLS: dict[str, list[str]] = {
+    cat: [
+        f"https://www.samsclub.com/s/{q.replace('+', '%20')}?clubId=6604"
+        + (f"&page={p}" if p > 1 else "")
+        for p in range(1, PAGES_PER_QUERY + 1)
+    ]
     for cat, q in _WALMART_QUERIES.items()
 }
 
@@ -395,6 +497,8 @@ def build_scrapers(
             categories=categories,
             categories_to_scrape=categories_to_scrape,
             staleness_days=staleness_days,
+            follow_links_pattern=ALDI_FOLLOW_PATTERN,
+            follow_links_cap=30,
         ),
         FirecrawlStoreScraper(
             store_id="walmart",
